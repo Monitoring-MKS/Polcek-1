@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>VALIDASI POLCEK</title>
+</head>
+<body>
+
+<h2>VALIDASI POLCEK</h2>
+
+<button onclick="test()">TEST KONEKSI</button>
+
+<script>
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyrb2xywUxqMl_Y5PQ5HWhTKAHoyJnNru89COp176xLis0DatptmHRMN9WOvTSUCw4/exec";
+
+console.log("SCRIPT LOADED");
+
+function test() {
+  console.log("TEST FETCH KE GAS");
+
+  fetch(GAS_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      action: "ping"
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    console.log("RESPON GAS:", data);
+    alert("KONEKSI OK");
+  })
+  .catch(err => {
+    console.error("FETCH ERROR:", err);
+    alert("GAGAL KONEK");
+  });
+}
+</script>
+
+</body>
+</html>
