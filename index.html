@@ -75,7 +75,7 @@
 </div>
 
 <script>
-    const G_URL = "https://script.google.com/macros/s/AKfycbwi7r9WeoE9FCS5lTucTP3oR3F2SMUiAZbECzU00auMqfLptV7q82xS1JTHFDqFFP4/exec";
+    const G_URL = "https://script.google.com/macros/s/AKfycbwg23BT8IkBHtIreKwjNrLkdja12AH0he-9lN0SWd4SHhXA90pW7-IkM3gLKhQT3No/exec";
     let dbPickAuto = [];
 
     async function initApp() {
@@ -91,36 +91,48 @@
     }
 
     function runFilter() {
-        const tgl = document.getElementById('p_tgl').value;
-        const kode = document.getElementById('p_kode').value.trim().toUpperCase();
-        const jenis = document.getElementById('p_jenis').value;
-        const fSelect = document.getElementById('p_faktur');
+    const tglRaw = document.getElementById('p_tgl').value; // Ambil input date
+    const kode = document.getElementById('p_kode').value.trim().toUpperCase();
+    const jenis = document.getElementById('p_jenis').value;
+    const fSelect = document.getElementById('p_faktur');
 
-        if (!tgl || !kode) return;
+    if (!tglRaw || !kode) return;
 
-        const findToko = dbPickAuto.find(i => i.tglInput === tgl && i.kodeToko === kode);
-        if (findToko) {
-            document.getElementById('p_nama').value = findToko.namaToko;
-        } else {
-            document.getElementById('p_nama').value = "DATA TIDAK ADA";
-            fSelect.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
-            return;
-        }
+    // Normalisasi format tanggal input agar pasti yyyy-mm-dd
+    const d = new Date(tglRaw);
+    const tglCheck = d.getFullYear() + '-' + 
+                     ('0' + (d.getMonth() + 1)).slice(-2) + '-' + 
+                     ('0' + d.getDate()).slice(-2);
 
-        const filteredData = dbPickAuto.filter(item => {
-            const matchBase = (item.tglInput === tgl && item.kodeToko === kode);
+    console.log("Mencari Tanggal:", tglCheck, "Kode:", kode);
+
+    // 1. Cari data berdasarkan Tanggal & Kode Toko saja (Flexible Match)
+    const matchToko = dbPickAuto.find(i => i.tglInput === tglCheck && i.kodeToko === kode);
+
+    if (matchToko) {
+        document.getElementById('p_nama').value = matchToko.namaToko;
+        
+        // 2. Filter No Faktur berdasarkan Jenis (Kontainer/DOS)
+        const filteredFaktur = dbPickAuto.filter(item => {
+            const isMatch = (item.tglInput === tglCheck && item.kodeToko === kode);
             const isDos = item.kontainer.toUpperCase().startsWith("DOS");
-            return jenis === "KONTAINER" ? (matchBase && !isDos) : (matchBase && isDos);
+            return jenis === "KONTAINER" ? (isMatch && !isDos) : (isMatch && isDos);
         });
 
         fSelect.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
-        if (filteredData.length > 0) {
-            const uniqueFaktur = [...new Set(filteredData.map(i => i.faktur))];
+        if (filteredFaktur.length > 0) {
+            const uniqueFaktur = [...new Set(filteredFaktur.map(i => i.faktur))];
             uniqueFaktur.forEach(f => {
                 fSelect.innerHTML += `<option value="${f}">${f}</option>`;
             });
+        } else {
+            fSelect.innerHTML = '<option value="">DATA JENIS TIDAK ADA</option>';
         }
+    } else {
+        document.getElementById('p_nama').value = "DATA TIDAK DITEMUKAN";
+        fSelect.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
     }
+}
 
     function validateScan() {
         const scanVal = document.getElementById('p_scan').value.trim();
