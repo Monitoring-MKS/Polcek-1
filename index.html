@@ -1,43 +1,206 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>VALIDASI POLCEK</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POLCEK VALIDASI - WH</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        :root { --green: #70ad47; --orange: #e67e22; --blue: #2980b9; --dark: #2c3e50; }
+        * { box-sizing: border-box; font-family: 'Arial Black', sans-serif; }
+        body { background: #b0b0b0; padding: 15px; margin: 0; }
+        .header { background: black; color: white; text-align: center; padding: 12px; border-radius: 10px; margin-bottom: 15px; font-size: 14px; }
+        .input-row { display: flex; align-items: center; margin-bottom: 8px; gap: 8px; }
+        .label { width: 110px; padding: 10px; font-size: 10px; color: white; border-radius: 5px; font-weight: bold; background: var(--green); text-transform: uppercase; }
+        input, select { flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #777; font-size: 13px; font-weight: bold; }
+        input[readonly] { background: #dcdcdc; color: #333; }
+        .footer { display: flex; gap: 8px; margin-top: 15px; }
+        .btn-main { flex: 1; padding: 15px; border: none; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; font-size: 12px; }
+        #loader { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; color: white; }
+    </style>
 </head>
-<body>
+<body onload="initApp()">
 
-<h2>VALIDASI POLCEK</h2>
+<div id="loader"><p>LOADING DATA PICK AUTO...</p></div>
 
-<button onclick="test()">TEST KONEKSI</button>
+<div class="header">PENGECEKAN PENYIAPAN BARANG</div>
+
+<div class="input-row">
+    <div class="label">TGL PROSES</div>
+    <input type="date" id="p_tgl" onchange="runFilter()">
+</div>
+
+<div class="input-row">
+    <div class="label">KD TOKO</div>
+    <input type="text" id="p_kode" placeholder="Ketik Kode Toko..." oninput="runFilter()">
+</div>
+
+<div class="input-row"><div class="label">NAMA TOKO</div><input type="text" id="p_nama" readonly></div>
+
+<div class="input-row">
+    <div class="label" style="background:var(--blue)">JENIS</div>
+    <select id="p_jenis" onchange="runFilter()">
+        <option value="KONTAINER">KONTAINER (RECEHAN)</option>
+        <option value="DOS">DOS (CARTON)</option>
+    </select>
+</div>
+
+<div class="input-row">
+    <div class="label">NO FAKTUR</div>
+    <select id="p_faktur" onchange="resetScanField()">
+        <option value="">-- PILIH FAKTUR --</option>
+    </select>
+</div>
+
+<hr style="border: 1px solid #999; margin: 15px 0;">
+
+<div class="input-row">
+    <div class="label" style="background: var(--orange);">SCAN BARCODE</div>
+    <input type="text" id="p_scan" placeholder="Scan Barcode Kontainer/DOS" onchange="validateScan()">
+</div>
+
+<div class="input-row"><div class="label">ZONA</div><input type="text" id="p_zona" readonly></div>
+<div class="input-row"><div class="label">URPICK</div><input type="text" id="p_urpick" readonly></div>
+<div class="input-row"><div class="label">ISI BARCODE</div><input type="text" id="p_kont_name" readonly></div>
+<div class="input-row"><div class="label">QTY DATA</div><input type="text" id="p_qty_data" readonly style="color:red"></div>
+
+<div class="input-row">
+    <div class="label" style="background: #2c3e50;">QTY SCAN</div>
+    <input type="number" id="p_qty_input" placeholder="Isi Qty Fisik...">
+</div>
+
+<div class="footer">
+    <button class="btn-main" style="background:#2ecc71" onclick="saveData()">SIMPAN DATA</button>
+    <button class="btn-main" style="background:red" onclick="syncToServer()">🚀 KIRIM (<span id="badge">0</span>)</button>
+</div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyrb2xywUxqMl_Y5PQ5HWhTKAHoyJnNru89COp176xLis0DatptmHRMN9WOvTSUCw4/exec";
+    const G_URL = "https://script.google.com/macros/s/AKfycbzIkd8Rj2MQ81JWOLM8fJEXnhOPzNvqmY3NC6H2Q-ScdbX1cTnEGRlR9Et1VxX9PJ4/exec";
+    let dbPickAuto = [];
 
-console.log("SCRIPT LOADED");
+    async function initApp() {
+        document.getElementById('loader').style.display = 'flex';
+        document.getElementById('p_tgl').valueAsDate = new Date();
+        try {
+            const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "getPickAutoData" }) });
+            const out = await res.json();
+            if (out.status === "success") dbPickAuto = out.data;
+        } catch (e) { alert("Koneksi Error!"); }
+        document.getElementById('loader').style.display = 'none';
+        updateBadge();
+    }
 
-function test() {
-  console.log("TEST FETCH KE GAS");
+    function runFilter() {
+        const tgl = document.getElementById('p_tgl').value;
+        const kode = document.getElementById('p_kode').value.trim().toUpperCase();
+        const jenis = document.getElementById('p_jenis').value;
+        const fSelect = document.getElementById('p_faktur');
 
-  fetch(GAS_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      action: "ping"
-    })
-  })
-  .then(res => res.json())
-  .then(data => {
-    console.log("RESPON GAS:", data);
-    alert("KONEKSI OK");
-  })
-  .catch(err => {
-    console.error("FETCH ERROR:", err);
-    alert("GAGAL KONEK");
-  });
-}
+        if (!tgl || !kode) return;
+
+        const findToko = dbPickAuto.find(i => i.tglInput === tgl && i.kodeToko === kode);
+        if (findToko) {
+            document.getElementById('p_nama').value = findToko.namaToko;
+        } else {
+            document.getElementById('p_nama').value = "DATA TIDAK ADA";
+            fSelect.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
+            return;
+        }
+
+        const filteredData = dbPickAuto.filter(item => {
+            const matchBase = (item.tglInput === tgl && item.kodeToko === kode);
+            const isDos = item.kontainer.toUpperCase().startsWith("DOS");
+            return jenis === "KONTAINER" ? (matchBase && !isDos) : (matchBase && isDos);
+        });
+
+        fSelect.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
+        if (filteredData.length > 0) {
+            const uniqueFaktur = [...new Set(filteredData.map(i => i.faktur))];
+            uniqueFaktur.forEach(f => {
+                fSelect.innerHTML += `<option value="${f}">${f}</option>`;
+            });
+        }
+    }
+
+    function validateScan() {
+        const scanVal = document.getElementById('p_scan').value.trim();
+        const fakturVal = document.getElementById('p_faktur').value;
+        if (!fakturVal) return alert("Pilih No Faktur!");
+
+        // Cari kecocokan scan dengan kolom Kontainer di GSheet
+        const match = dbPickAuto.find(item => item.faktur === fakturVal && item.kontainer === scanVal);
+
+        if (match) {
+            document.getElementById('p_zona').value = match.zona;
+            document.getElementById('p_urpick').value = match.urpick;
+            document.getElementById('p_kont_name').value = match.kontainer;
+            document.getElementById('p_qty_data').value = match.qtyData;
+            
+            // Logika Auto-Qty: Jika Kontainer (receh), otomatis set 1
+            if (document.getElementById('p_jenis').value === "KONTAINER") {
+                document.getElementById('p_qty_input').value = 1;
+            } else {
+                document.getElementById('p_qty_input').value = "";
+                document.getElementById('p_qty_input').focus();
+            }
+            beep(true);
+        } else {
+            beep(false);
+            alert("BARCODE TIDAK SESUAI DATA!");
+            resetScanField();
+        }
+    }
+
+    function resetScanField() {
+        ['p_scan','p_zona','p_urpick','p_kont_name','p_qty_data','p_qty_input'].forEach(id => document.getElementById(id).value = "");
+    }
+
+    function saveData() {
+        const scan = document.getElementById('p_scan').value;
+        const qty = document.getElementById('p_qty_input').value;
+        if (!scan || !qty) return alert("Belum ada data discan!");
+
+        const q = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+        q.push({
+            tgl: document.getElementById('p_tgl').value,
+            jenis: document.getElementById('p_jenis').value,
+            kode: document.getElementById('p_kode').value,
+            nama: document.getElementById('p_nama').value,
+            faktur: document.getElementById('p_faktur').value,
+            urpick: document.getElementById('p_urpick').value,
+            barcode: scan,
+            qty: qty
+        });
+        localStorage.setItem('q_polcek', JSON.stringify(q));
+        alert("Simpan Lokal Berhasil!");
+        resetScanField();
+        updateBadge();
+    }
+
+    async function syncToServer() {
+        const q = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+        if (q.length === 0) return;
+        document.getElementById('loader').style.display = 'flex';
+        try {
+            const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "syncBatch", type: "polcek", data: q }) });
+            if ((await res.json()).status === "success") {
+                localStorage.setItem('q_polcek', "[]");
+                updateBadge();
+                alert("Data Berhasil Terkirim!");
+            }
+        } catch (e) { alert("Gagal Kirim!"); }
+        document.getElementById('loader').style.display = 'none';
+    }
+
+    function updateBadge() { document.getElementById('badge').innerText = JSON.parse(localStorage.getItem('q_polcek') || "[]").length; }
+    function beep(s) {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.connect(g); g.connect(ctx.destination);
+        osc.frequency.setValueAtTime(s ? 880 : 150, ctx.currentTime);
+        osc.start(); osc.stop(ctx.currentTime + 0.1);
+    }
 </script>
-
 </body>
 </html>
