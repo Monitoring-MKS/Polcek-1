@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POLCEK VALIDASI WH</title>
     <style>
-        :root { --green: #70ad47; --orange: #e67e22; --blue: #2980b9; }
+        :root { --green: #70ad47; --orange: #e67e22; --blue: #2980b9; --red: #c0392b; }
         * { box-sizing: border-box; font-family: 'Arial Black', sans-serif; }
         body { background: #b0b0b0; padding: 15px; margin: 0; }
         .header { background: black; color: white; text-align: center; padding: 12px; border-radius: 10px; margin-bottom: 15px; font-size: 14px; }
@@ -31,8 +31,8 @@
 <div class="input-row">
     <div class="label" style="background:var(--blue)">JENIS</div>
     <select id="p_jenis" onchange="runFilter()">
-        <option value="KONTAINER">KONTAINER (RECEHAN)</option>
-        <option value="DOS">DOS (CARTON)</option>
+        <option value="KONTAINER">KONTAINER</option>
+        <option value="DOS">DOS</option>
     </select>
 </div>
 
@@ -44,19 +44,24 @@
 <hr style="border: 1px solid #999; margin: 15px 0;">
 
 <div class="input-row">
-    <div class="label" style="background: var(--orange);">SCAN BARCODE</div>
-    <input type="text" id="p_scan" placeholder="Scan Barcode..." onchange="validateScan()">
+    <div class="label" style="background: var(--orange);">1. SCAN LABEL</div>
+    <input type="text" id="p_scan_label" placeholder="Scan Barcode Label..." onchange="validateScanLabel()">
 </div>
 
-<div class="input-row"><div class="label">ZONA</div><input type="text" id="p_zona" readonly></div>
-<div class="input-row"><div class="label">ISI BARCODE</div><input type="text" id="p_kont_name" readonly></div>
+<div id="area_fisik" style="display:none; border: 2px solid var(--red); padding: 10px; border-radius: 5px; margin-bottom: 8px;">
+    <div class="input-row">
+        <div class="label" style="background: var(--red);">2. SCAN FISIK</div>
+        <input type="text" id="p_scan_fisik" placeholder="Scan Barcode Produk..." onchange="validateScanFisik()">
+    </div>
+</div>
 
 <div class="input-row"><div class="label">PLU</div><input type="text" id="p_plu" readonly></div>
-<div class="input-row"><div class="label">NAMA BARANG</div><input type="text" id="p_descp" readonly></div>
+<div class="input-row"><div class="label">BARANG</div><input type="text" id="p_descp" readonly></div>
+<div class="input-row"><div class="label">ZONA</div><input type="text" id="p_zona" readonly></div>
 
 <div class="input-row">
     <div class="label" style="background: #2c3e50;">QTY SCAN</div>
-    <input type="number" id="p_qty_input" placeholder="0">
+    <input type="number" id="p_qty_input" placeholder="0" readonly>
 </div>
 
 <input type="hidden" id="p_qty_data">
@@ -67,20 +72,29 @@
 </div>
 
 <script>
-    const G_URL = "https://script.google.com/macros/s/AKfycbz3dDKGAHGJ1NUet6ObLW3kdkcppnC-li8U8tvjMTID8X9sXxdoFqdCUpo3RRBfsMc/exec"; // Masukkan URL Deployment GS
+    const G_URL = "https://script.google.com/macros/s/AKfycbyQcJnA4-d9EUJ4u5nuaVkNjYPeY8e7g_UtpVKYeBku_cTnJWLKDlchbF84o3QJgg/exec"; 
     let dbPickAuto = [];
+    let dbMasterBarcode = [];
 
     async function initApp() {
         document.getElementById('loader').style.display = 'flex';
         document.getElementById('p_tgl').valueAsDate = new Date();
         try {
             const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "getAllData" }) });
-            const out = await res.json();
+            const out = await res.json(); // out dideklarasikan di sini
+            
             if (out.status === "success") {
                 dbPickAuto = out.pickAuto;
-                console.log("Data Loaded:", dbPickAuto.length);
+                dbMasterBarcode = out.masterBarcode;
+                console.log("Data PickAuto:", dbPickAuto.length);
+                console.log("Data MasterBarcode:", dbMasterBarcode.length);
+            } else {
+                alert("Error: " + out.message);
             }
-        } catch (e) { alert("Gagal Sinkronisasi!"); }
+        } catch (e) { 
+            console.error(e);
+            alert("Gagal Sinkronisasi!"); 
+        }
         document.getElementById('loader').style.display = 'none';
         updateBadge();
     }
@@ -104,7 +118,7 @@
             
             const filteredFaktur = dbPickAuto.filter(item => {
                 const isMatch = (item.tglInput === tglCheck && item.kodeToko === kode);
-                const isDos = item.kontainer.toUpperCase().startsWith("DOS");
+                const isDos = item.kontainer.toUpperCase().includes("DOS");
                 return jenis === "KONTAINER" ? (isMatch && !isDos) : (isMatch && isDos);
             });
 
@@ -117,61 +131,119 @@
         }
     }
 
-    function validateScan() {
-        const scanVal = document.getElementById('p_scan').value.trim();
-        const jenisVal = document.getElementById('p_jenis').value;
-        const fakturVal = document.getElementById('p_faktur').value;
-        const kodeToko = document.getElementById('p_kode').value.toUpperCase();
+// TAHAP 1: VALIDASI LABEL
+function validateScanLabel() {
+    const scanVal = document.getElementById('p_scan_label').value.trim();
+    const jenisVal = document.getElementById('p_jenis').value;
+    const fakturVal = document.getElementById('p_faktur').value;
+    const kodeTokoPilihan = document.getElementById('p_kode').value.toUpperCase();
 
-        if (!fakturVal) { alert("Pilih Faktur!"); document.getElementById('p_scan').value = ""; return; }
+    if (!fakturVal) { 
+        alert("Pilih Faktur terlebih dahulu!"); 
+        document.getElementById('p_scan_label').value = "";
+        return; 
+    }
 
-        let match;
-        if (jenisVal === "KONTAINER") {
-            match = dbPickAuto.find(i => i.faktur === fakturVal && i.kontainer === scanVal);
-        } else {
-            const parts = scanVal.split('-');
-            const pluLabel = parts[parts.length - 1];
-            const storeLabel = parts[parts.length - 2];
-            if (storeLabel !== kodeToko) { alert("SALAH TOKO!"); return; }
-            match = dbPickAuto.find(i => i.faktur === fakturVal && i.plu === pluLabel);
+    // --- LOGIKA KHUSUS KONTAINER ---
+    if (jenisVal === "KONTAINER") {
+        const inputRaw = scanVal.toUpperCase(); 
+
+        // 1. Cek Duplikasi di antrian lokal
+        let antrian = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+        if (antrian.some(item => item.barcode.toUpperCase() === inputRaw && item.faktur === fakturVal)) {
+            alert("⚠️ KONTAINER SUDAH DI SCAN!");
+            document.getElementById('p_scan_label').value = "";
+            return;
         }
 
+        // 2. Bedah input "-K0001-R860" menjadi "K0001" dan "R860"
+        const parts = inputRaw.split('-').filter(p => p !== ""); 
+        const kontainerMurni = parts[0]; 
+        const tokoLabel = parts[1];      
+
+        // 3. Validasi Toko
+        if (tokoLabel !== kodeTokoPilihan) {
+            alert("⚠️ BARCODE TIDAK COCOK " );
+            document.getElementById('p_scan_label').value = "";
+            return;
+        }
+
+        // 4. Cari di Database
+        const match = dbPickAuto.find(i => {
+            const dbKontainer = String(i.kontainer || "").trim().toUpperCase();
+            const dbToko = String(i.kodeToko || "").trim().toUpperCase();
+            return i.faktur === fakturVal && dbKontainer === kontainerMurni && dbToko === kodeTokoPilihan;
+        });
+
         if (match) {
-            // Pengisian aman karena elemen ID sudah dipastikan ada di HTML di atas
-            document.getElementById('p_zona').value = match.zona;
-            document.getElementById('p_kont_name').value = match.kontainer;
             document.getElementById('p_plu').value = match.plu || "-";
             document.getElementById('p_descp').value = match.descp || "-";
+            document.getElementById('p_zona').value = match.zona;
             document.getElementById('p_qty_data').value = match.qtyData;
-
-            if (jenisVal === "KONTAINER") {
-                document.getElementById('p_qty_input').value = 1;
-                document.getElementById('p_qty_input').readOnly = true;
-            } else {
-                document.getElementById('p_qty_input').value = "";
-                document.getElementById('p_qty_input').readOnly = false;
-                document.getElementById('p_qty_input').focus();
-            }
+            document.getElementById('p_qty_input').value = 1;
+            document.getElementById('p_qty_input').readOnly = true;
+            
+            setTimeout(() => { saveData(); }, 500);
         } else {
-            alert("BARCODE TIDAK DITEMUKAN!");
-            resetScanField();
+            alert("⚠️ DATA TIDAK DITEMUKAN!\nKontainer '" + kontainerMurni + "' tidak ada di faktur ini.");
+            document.getElementById('p_scan_label').value = "";
+        }
+    } 
+    // --- AKHIR LOGIKA KONTAINER ---
+    else {
+        // --- LOGIKA DOS (Tahap 1: Scan Label) ---
+        const partsDos = scanVal.split('-');
+        const pluLabel = partsDos[partsDos.length - 1];
+        
+        const matchDos = dbPickAuto.find(i => i.faktur === fakturVal && i.plu === pluLabel);
+
+        if (matchDos) {
+            document.getElementById('p_plu').value = matchDos.plu || "-";
+            document.getElementById('p_descp').value = matchDos.descp || "-";
+            document.getElementById('p_zona').value = matchDos.zona;
+            document.getElementById('p_qty_data').value = matchDos.qtyData;
+            document.getElementById('area_fisik').style.display = 'block';
+            document.getElementById('p_scan_fisik').focus();
+        } else {
+            alert("BARCODE DOS TIDAK COCOK!");
+            document.getElementById('p_scan_label').value = "";
+        }
+    }
+} 
+
+    // TAHAP 2: VALIDASI FISIK
+    function validateScanFisik() {
+        const scanFisik = document.getElementById('p_scan_fisik').value.trim();
+        const pluTarget = document.getElementById('p_plu').value;
+
+        const isMatch = dbMasterBarcode.find(m => 
+            (m.barcodeDos === scanFisik || m.barcodeItem === scanFisik) && m.plu === pluTarget
+        );
+
+        if (isMatch) {
+            document.getElementById('p_qty_input').readOnly = false;
+            document.getElementById('p_qty_input').focus();
+            document.getElementById('p_qty_input').style.background = "white";
+        } else {
+            alert("BARCODE FISIK TIDAK SESUAI PLU!");
+            document.getElementById('p_scan_fisik').value = "";
         }
     }
 
     function resetScanField() {
-        ['p_scan','p_zona','p_kont_name','p_plu','p_descp','p_qty_input','p_qty_data'].forEach(id => {
+        ['p_scan_label','p_scan_fisik','p_plu','p_descp','p_zona','p_qty_input','p_qty_data'].forEach(id => {
             const el = document.getElementById(id);
-            if (el) {
-                el.value = "";
-                if (id === 'p_qty_input') el.readOnly = false;
-            }
+            if(el) el.value = "";
         });
+        document.getElementById('area_fisik').style.display = 'none';
+        document.getElementById('p_qty_input').readOnly = true;
+        document.getElementById('p_qty_input').style.background = "#dcdcdc";
     }
 
     function saveData() {
-        const scan = document.getElementById('p_scan').value;
+        const scanLabel = document.getElementById('p_scan_label').value;
         const qtyS = document.getElementById('p_qty_input').value;
-        if (!scan || !qtyS) return alert("Scan & Isi Qty!");
+        if (!scanLabel || !qtyS) return alert("Lengkapi Scan & Qty!");
 
         let q = JSON.parse(localStorage.getItem('q_polcek') || "[]");
         q.push({
@@ -182,7 +254,7 @@
             urpick: document.getElementById('p_urpick').value,
             faktur: document.getElementById('p_faktur').value,
             zona: document.getElementById('p_zona').value,
-            barcode: scan,
+            barcode: scanLabel,
             plu: document.getElementById('p_plu').value,
             descp: document.getElementById('p_descp').value,
             qty_data: document.getElementById('p_qty_data').value,
@@ -191,7 +263,7 @@
         localStorage.setItem('q_polcek', JSON.stringify(q));
         resetScanField();
         updateBadge();
-        document.getElementById('p_scan').focus();
+        document.getElementById('p_scan_label').focus();
     }
 
     async function syncToServer() {
@@ -200,10 +272,11 @@
         document.getElementById('loader').style.display = 'flex';
         try {
             const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "syncBatch", data: q }) });
-            if ((await res.json()).status === "success") {
+            const resJson = await res.json();
+            if (resJson.status === "success") {
                 localStorage.setItem('q_polcek', "[]");
                 updateBadge();
-                alert("Data Terkirim!");
+                alert("Data Berhasil Terkirim!");
             }
         } catch (e) { alert("Gagal Kirim!"); }
         document.getElementById('loader').style.display = 'none';
