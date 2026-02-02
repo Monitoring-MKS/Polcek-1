@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POLCEK VALIDASI - WH</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <title>POLCEK VALIDASI WH</title>
     <style>
-        :root { --green: #70ad47; --orange: #e67e22; --blue: #2980b9; --dark: #2c3e50; }
+        :root { --green: #70ad47; --orange: #e67e22; --blue: #2980b9; }
         * { box-sizing: border-box; font-family: 'Arial Black', sans-serif; }
         body { background: #b0b0b0; padding: 15px; margin: 0; }
         .header { background: black; color: white; text-align: center; padding: 12px; border-radius: 10px; margin-bottom: 15px; font-size: 14px; }
@@ -21,21 +20,13 @@
 </head>
 <body onload="initApp()">
 
-<div id="loader"><p>LOADING DATA PICK AUTO...</p></div>
+<div id="loader"><p>SINKRONISASI DATA...</p></div>
+<div class="header">VALIDASI PENYIAPAN BARANG</div>
 
-<div class="header">PENGECEKAN PENYIAPAN BARANG</div>
-
-<div class="input-row">
-    <div class="label">TGL PROSES</div>
-    <input type="date" id="p_tgl" onchange="runFilter()">
-</div>
-
-<div class="input-row">
-    <div class="label">KD TOKO</div>
-    <input type="text" id="p_kode" placeholder="Ketik Kode Toko..." oninput="runFilter()">
-</div>
-
+<div class="input-row"><div class="label">TGL PROSES</div><input type="date" id="p_tgl" onchange="runFilter()"></div>
+<div class="input-row"><div class="label">KD TOKO</div><input type="text" id="p_kode" placeholder="R860" oninput="runFilter()"></div>
 <div class="input-row"><div class="label">NAMA TOKO</div><input type="text" id="p_nama" readonly></div>
+<div class="input-row"><div class="label">URPICK</div><input type="text" id="p_urpick" readonly></div>
 
 <div class="input-row">
     <div class="label" style="background:var(--blue)">JENIS</div>
@@ -47,146 +38,160 @@
 
 <div class="input-row">
     <div class="label">NO FAKTUR</div>
-    <select id="p_faktur" onchange="resetScanField()">
-        <option value="">-- PILIH FAKTUR --</option>
-    </select>
+    <select id="p_faktur" onchange="resetScanField()"><option value="">-- PILIH FAKTUR --</option></select>
 </div>
 
 <hr style="border: 1px solid #999; margin: 15px 0;">
 
 <div class="input-row">
     <div class="label" style="background: var(--orange);">SCAN BARCODE</div>
-    <input type="text" id="p_scan" placeholder="Scan Barcode Kontainer/DOS" onchange="validateScan()">
+    <input type="text" id="p_scan" placeholder="Scan Barcode..." onchange="validateScan()">
 </div>
 
 <div class="input-row"><div class="label">ZONA</div><input type="text" id="p_zona" readonly></div>
-<div class="input-row"><div class="label">URPICK</div><input type="text" id="p_urpick" readonly></div>
 <div class="input-row"><div class="label">ISI BARCODE</div><input type="text" id="p_kont_name" readonly></div>
-<div class="input-row"><div class="label">QTY DATA</div><input type="text" id="p_qty_data" readonly style="color:red"></div>
+
+<div class="input-row"><div class="label">PLU</div><input type="text" id="p_plu" readonly></div>
+<div class="input-row"><div class="label">NAMA BARANG</div><input type="text" id="p_descp" readonly></div>
 
 <div class="input-row">
     <div class="label" style="background: #2c3e50;">QTY SCAN</div>
-    <input type="number" id="p_qty_input" placeholder="Isi Qty Fisik...">
+    <input type="number" id="p_qty_input" placeholder="0">
 </div>
 
+<input type="hidden" id="p_qty_data">
+
 <div class="footer">
-    <button class="btn-main" style="background:#2ecc71" onclick="saveData()">SIMPAN DATA</button>
+    <button class="btn-main" style="background:#2ecc71" onclick="saveData()">SIMPAN</button>
     <button class="btn-main" style="background:red" onclick="syncToServer()">🚀 KIRIM (<span id="badge">0</span>)</button>
 </div>
 
 <script>
-    const G_URL = "https://script.google.com/macros/s/AKfycbwg23BT8IkBHtIreKwjNrLkdja12AH0he-9lN0SWd4SHhXA90pW7-IkM3gLKhQT3No/exec";
+    const G_URL = "https://script.google.com/macros/s/AKfycbz3dDKGAHGJ1NUet6ObLW3kdkcppnC-li8U8tvjMTID8X9sXxdoFqdCUpo3RRBfsMc/exec"; // Masukkan URL Deployment GS
     let dbPickAuto = [];
 
     async function initApp() {
         document.getElementById('loader').style.display = 'flex';
         document.getElementById('p_tgl').valueAsDate = new Date();
         try {
-            const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "getPickAutoData" }) });
+            const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "getAllData" }) });
             const out = await res.json();
-            if (out.status === "success") dbPickAuto = out.data;
-        } catch (e) { alert("Koneksi Error!"); }
+            if (out.status === "success") {
+                dbPickAuto = out.pickAuto;
+                console.log("Data Loaded:", dbPickAuto.length);
+            }
+        } catch (e) { alert("Gagal Sinkronisasi!"); }
         document.getElementById('loader').style.display = 'none';
         updateBadge();
     }
 
     function runFilter() {
-    const tglRaw = document.getElementById('p_tgl').value; // Ambil input date
-    const kode = document.getElementById('p_kode').value.trim().toUpperCase();
-    const jenis = document.getElementById('p_jenis').value;
-    const fSelect = document.getElementById('p_faktur');
+        const tglRaw = document.getElementById('p_tgl').value;
+        const kode = document.getElementById('p_kode').value.trim().toUpperCase();
+        const jenis = document.getElementById('p_jenis').value;
+        const fSelect = document.getElementById('p_faktur');
 
-    if (!tglRaw || !kode) return;
+        if (!tglRaw || !kode) return;
 
-    // Normalisasi format tanggal input agar pasti yyyy-mm-dd
-    const d = new Date(tglRaw);
-    const tglCheck = d.getFullYear() + '-' + 
-                     ('0' + (d.getMonth() + 1)).slice(-2) + '-' + 
-                     ('0' + d.getDate()).slice(-2);
+        const d = new Date(tglRaw);
+        const tglCheck = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
 
-    console.log("Mencari Tanggal:", tglCheck, "Kode:", kode);
+        const matchToko = dbPickAuto.find(i => i.tglInput === tglCheck && i.kodeToko === kode);
 
-    // 1. Cari data berdasarkan Tanggal & Kode Toko saja (Flexible Match)
-    const matchToko = dbPickAuto.find(i => i.tglInput === tglCheck && i.kodeToko === kode);
+        if (matchToko) {
+            document.getElementById('p_nama').value = matchToko.namaToko;
+            document.getElementById('p_urpick').value = matchToko.urpick;
+            
+            const filteredFaktur = dbPickAuto.filter(item => {
+                const isMatch = (item.tglInput === tglCheck && item.kodeToko === kode);
+                const isDos = item.kontainer.toUpperCase().startsWith("DOS");
+                return jenis === "KONTAINER" ? (isMatch && !isDos) : (isMatch && isDos);
+            });
 
-    if (matchToko) {
-        document.getElementById('p_nama').value = matchToko.namaToko;
-        
-        // 2. Filter No Faktur berdasarkan Jenis (Kontainer/DOS)
-        const filteredFaktur = dbPickAuto.filter(item => {
-            const isMatch = (item.tglInput === tglCheck && item.kodeToko === kode);
-            const isDos = item.kontainer.toUpperCase().startsWith("DOS");
-            return jenis === "KONTAINER" ? (isMatch && !isDos) : (isMatch && isDos);
-        });
-
-        fSelect.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
-        if (filteredFaktur.length > 0) {
-            const uniqueFaktur = [...new Set(filteredFaktur.map(i => i.faktur))];
-            uniqueFaktur.forEach(f => {
+            fSelect.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
+            [...new Set(filteredFaktur.map(i => i.faktur))].forEach(f => {
                 fSelect.innerHTML += `<option value="${f}">${f}</option>`;
             });
         } else {
-            fSelect.innerHTML = '<option value="">DATA JENIS TIDAK ADA</option>';
+            document.getElementById('p_nama').value = "DATA TIDAK DITEMUKAN";
         }
-    } else {
-        document.getElementById('p_nama').value = "DATA TIDAK DITEMUKAN";
-        fSelect.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
     }
-}
 
     function validateScan() {
         const scanVal = document.getElementById('p_scan').value.trim();
+        const jenisVal = document.getElementById('p_jenis').value;
         const fakturVal = document.getElementById('p_faktur').value;
-        if (!fakturVal) return alert("Pilih No Faktur!");
+        const kodeToko = document.getElementById('p_kode').value.toUpperCase();
 
-        // Cari kecocokan scan dengan kolom Kontainer di GSheet
-        const match = dbPickAuto.find(item => item.faktur === fakturVal && item.kontainer === scanVal);
+        if (!fakturVal) { alert("Pilih Faktur!"); document.getElementById('p_scan').value = ""; return; }
+
+        let match;
+        if (jenisVal === "KONTAINER") {
+            match = dbPickAuto.find(i => i.faktur === fakturVal && i.kontainer === scanVal);
+        } else {
+            const parts = scanVal.split('-');
+            const pluLabel = parts[parts.length - 1];
+            const storeLabel = parts[parts.length - 2];
+            if (storeLabel !== kodeToko) { alert("SALAH TOKO!"); return; }
+            match = dbPickAuto.find(i => i.faktur === fakturVal && i.plu === pluLabel);
+        }
 
         if (match) {
+            // Pengisian aman karena elemen ID sudah dipastikan ada di HTML di atas
             document.getElementById('p_zona').value = match.zona;
-            document.getElementById('p_urpick').value = match.urpick;
             document.getElementById('p_kont_name').value = match.kontainer;
+            document.getElementById('p_plu').value = match.plu || "-";
+            document.getElementById('p_descp').value = match.descp || "-";
             document.getElementById('p_qty_data').value = match.qtyData;
-            
-            // Logika Auto-Qty: Jika Kontainer (receh), otomatis set 1
-            if (document.getElementById('p_jenis').value === "KONTAINER") {
+
+            if (jenisVal === "KONTAINER") {
                 document.getElementById('p_qty_input').value = 1;
+                document.getElementById('p_qty_input').readOnly = true;
             } else {
                 document.getElementById('p_qty_input').value = "";
+                document.getElementById('p_qty_input').readOnly = false;
                 document.getElementById('p_qty_input').focus();
             }
-            beep(true);
         } else {
-            beep(false);
-            alert("BARCODE TIDAK SESUAI DATA!");
+            alert("BARCODE TIDAK DITEMUKAN!");
             resetScanField();
         }
     }
 
     function resetScanField() {
-        ['p_scan','p_zona','p_urpick','p_kont_name','p_qty_data','p_qty_input'].forEach(id => document.getElementById(id).value = "");
+        ['p_scan','p_zona','p_kont_name','p_plu','p_descp','p_qty_input','p_qty_data'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.value = "";
+                if (id === 'p_qty_input') el.readOnly = false;
+            }
+        });
     }
 
     function saveData() {
         const scan = document.getElementById('p_scan').value;
-        const qty = document.getElementById('p_qty_input').value;
-        if (!scan || !qty) return alert("Belum ada data discan!");
+        const qtyS = document.getElementById('p_qty_input').value;
+        if (!scan || !qtyS) return alert("Scan & Isi Qty!");
 
-        const q = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+        let q = JSON.parse(localStorage.getItem('q_polcek') || "[]");
         q.push({
             tgl: document.getElementById('p_tgl').value,
             jenis: document.getElementById('p_jenis').value,
             kode: document.getElementById('p_kode').value,
             nama: document.getElementById('p_nama').value,
-            faktur: document.getElementById('p_faktur').value,
             urpick: document.getElementById('p_urpick').value,
+            faktur: document.getElementById('p_faktur').value,
+            zona: document.getElementById('p_zona').value,
             barcode: scan,
-            qty: qty
+            plu: document.getElementById('p_plu').value,
+            descp: document.getElementById('p_descp').value,
+            qty_data: document.getElementById('p_qty_data').value,
+            qty_scan: qtyS
         });
         localStorage.setItem('q_polcek', JSON.stringify(q));
-        alert("Simpan Lokal Berhasil!");
         resetScanField();
         updateBadge();
+        document.getElementById('p_scan').focus();
     }
 
     async function syncToServer() {
@@ -194,25 +199,17 @@
         if (q.length === 0) return;
         document.getElementById('loader').style.display = 'flex';
         try {
-            const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "syncBatch", type: "polcek", data: q }) });
+            const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "syncBatch", data: q }) });
             if ((await res.json()).status === "success") {
                 localStorage.setItem('q_polcek', "[]");
                 updateBadge();
-                alert("Data Berhasil Terkirim!");
+                alert("Data Terkirim!");
             }
         } catch (e) { alert("Gagal Kirim!"); }
         document.getElementById('loader').style.display = 'none';
     }
 
     function updateBadge() { document.getElementById('badge').innerText = JSON.parse(localStorage.getItem('q_polcek') || "[]").length; }
-    function beep(s) {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.connect(g); g.connect(ctx.destination);
-        osc.frequency.setValueAtTime(s ? 880 : 150, ctx.currentTime);
-        osc.start(); osc.stop(ctx.currentTime + 0.1);
-    }
 </script>
 </body>
 </html>
