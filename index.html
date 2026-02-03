@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POLCEK VALIDASI WH</title>
+    <title>POLCEK VALIDASI WH - CAMERA VERSION</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root { --green: #70ad47; --orange: #e67e22; --blue: #2980b9; --red: #c0392b; }
         * { box-sizing: border-box; font-family: 'Arial Black', sans-serif; }
@@ -13,24 +14,44 @@
         .label { width: 110px; padding: 10px; font-size: 10px; color: white; border-radius: 5px; font-weight: bold; background: var(--green); text-transform: uppercase; }
         input, select { flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #777; font-size: 13px; font-weight: bold; }
         input[readonly] { background: #dcdcdc; color: #333; }
+        .btn-cam { padding: 10px; border-radius: 5px; background: #34495e; color: white; border: none; cursor: pointer; }
         .footer { display: flex; gap: 8px; margin-top: 15px; }
         .btn-main { flex: 1; padding: 15px; border: none; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; font-size: 12px; }
         #loader { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; color: white; }
+        /* Modal Camera */
+        #reader-container { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:10000; flex-direction:column; align-items:center; justify-content:center; }
+        #reader { width: 320px; background: white; border-radius: 10px; overflow: hidden; }
     </style>
 </head>
 <body onload="initApp()">
 
 <div id="loader"><p>SINKRONISASI DATA...</p></div>
-<div class="header">POLCEK - WH MAKASSAR</div>
 
-<div class="input-row"><div class="label">TGL PROSES</div><input type="date" id="p_tgl" onchange="runFilter()"></div>
-<div class="input-row"><div class="label">KD TOKO</div><input type="text" id="p_kode" placeholder="ketik kode toko...." oninput="runFilter()"></div>
+<div id="reader-container">
+    <div id="reader"></div>
+    <button onclick="stopScan()" style="margin-top:20px; padding:15px 30px; background:red; color:white; border:none; border-radius:5px; font-weight:bold;">TUTUP KAMERA</button>
+</div>
+
+<div class="header">VALIDASI PENYIAPAN BARANG</div>
+
+<div class="input-row">
+    <div class="label">TGL PROSES</div>
+    <input type="date" id="p_tgl" onchange="runFilter()">
+</div>
+
+<div class="input-row">
+    <div class="label">KD TOKO</div>
+    <input type="text" id="p_kode" placeholder="R860" onchange="processStoreInput()">
+    <button class="btn-cam" onclick="startScan('p_kode')">📷</button>
+</div>
+
 <div class="input-row"><div class="label">NAMA TOKO</div><input type="text" id="p_nama" readonly></div>
 <div class="input-row"><div class="label">URPICK</div><input type="text" id="p_urpick" readonly></div>
 
 <div class="input-row">
     <div class="label" style="background:var(--blue)">JENIS</div>
-    <select id="p_jenis" onchange="runFilter()">
+    <select id="p_jenis" onchange="focusToFaktur()">
+        <option value="">-- PILIH JENIS --</option>
         <option value="KONTAINER">KONTAINER</option>
         <option value="DOS">DOS</option>
     </select>
@@ -38,20 +59,24 @@
 
 <div class="input-row">
     <div class="label">NO FAKTUR</div>
-    <select id="p_faktur" onchange="resetScanField()"><option value="">-- PILIH FAKTUR --</option></select>
+    <select id="p_faktur" onchange="focusToBarcode()">
+        <option value="">-- PILIH FAKTUR --</option>
+    </select>
 </div>
 
 <hr style="border: 1px solid #999; margin: 15px 0;">
 
 <div class="input-row">
     <div class="label" style="background: var(--orange);">SCAN LABEL</div>
-    <input type="text" id="p_scan_label" placeholder="Scan Barcode Label..." onchange="validateScanLabel()">
+    <input type="text" id="p_scan_label" placeholder="Scan Label..." onchange="validateScanLabel()">
+    <button class="btn-cam" onclick="startScan('p_scan_label')">📷</button>
 </div>
 
 <div id="area_fisik" style="display:none; border: 2px solid var(--red); padding: 10px; border-radius: 5px; margin-bottom: 8px;">
     <div class="input-row">
-        <div class="label" style="background: var(--red);">SCAN FISIK DOS</div>
+        <div class="label" style="background: var(--red);">SCAN FISIK</div>
         <input type="text" id="p_scan_fisik" placeholder="Scan Barcode Produk..." onchange="validateScanFisik()">
+        <button class="btn-cam" onclick="startScan('p_scan_fisik')">📷</button>
     </div>
 </div>
 
@@ -68,6 +93,7 @@
 
 <div class="footer">
     <button class="btn-main" style="background:#2ecc71" onclick="saveData()">SIMPAN</button>
+    <button class="btn-main" style="background:#34495e" onclick="clearAllFields()">CLEAR</button>
     <button class="btn-main" style="background:red" onclick="syncToServer()">🚀 KIRIM (<span id="badge">0</span>)</button>
 </div>
 
@@ -75,28 +101,79 @@
     const G_URL = "https://script.google.com/macros/s/AKfycbyQcJnA4-d9EUJ4u5nuaVkNjYPeY8e7g_UtpVKYeBku_cTnJWLKDlchbF84o3QJgg/exec"; 
     let dbPickAuto = [];
     let dbMasterBarcode = [];
+    let html5QrCode;
 
+    // --- INITIALIZE APP ---
     async function initApp() {
         document.getElementById('loader').style.display = 'flex';
         document.getElementById('p_tgl').valueAsDate = new Date();
         try {
             const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "getAllData" }) });
-            const out = await res.json(); // out dideklarasikan di sini
-            
+            const out = await res.json();
             if (out.status === "success") {
                 dbPickAuto = out.pickAuto;
                 dbMasterBarcode = out.masterBarcode;
-                console.log("Data PickAuto:", dbPickAuto.length);
-                console.log("Data MasterBarcode:", dbMasterBarcode.length);
-            } else {
-                alert("Error: " + out.message);
             }
-        } catch (e) { 
-            console.error(e);
-            alert("Gagal Sinkronisasi!"); 
-        }
+        } catch (e) { alert("Gagal Load Data!"); }
         document.getElementById('loader').style.display = 'none';
         updateBadge();
+    }
+
+    // --- KAMERA SCANNER ---
+    async function startScan(targetId) {
+        document.getElementById('reader-container').style.display = 'flex';
+        html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 15, qrbox: { width: 250, height: 150 } };
+        
+        try {
+            await html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+                let text = decodedText.trim();
+                document.getElementById(targetId).value = text;
+                
+                stopScan();
+                
+                // Trigger event berdasarkan target
+                if (targetId === 'p_kode') processStoreInput();
+                if (targetId === 'p_scan_label') validateScanLabel();
+                if (targetId === 'p_scan_fisik') validateScanFisik();
+            });
+        } catch (err) { alert("Izin kamera ditolak!"); stopScan(); }
+    }
+
+    function stopScan() {
+        if (html5QrCode) {
+            html5QrCode.stop().then(() => {
+                document.getElementById('reader-container').style.display = 'none';
+            }).catch(() => {
+                document.getElementById('reader-container').style.display = 'none';
+            });
+        } else {
+            document.getElementById('reader-container').style.display = 'none';
+        }
+    }
+
+    // --- LOGIKA FLOW ---
+    function extractStoreCode(text) {
+        const parts = text.toUpperCase().split('-').filter(p => p !== "");
+        if (text.toUpperCase().includes("DOS")) return parts[2] || text;
+        return parts[1] || text;
+    }
+
+    function processStoreInput() {
+        const el = document.getElementById('p_kode');
+        el.value = extractStoreCode(el.value);
+        runFilter();
+        document.getElementById('p_jenis').focus();
+    }
+
+    function focusToFaktur() {
+        runFilter();
+        document.getElementById('p_faktur').focus();
+    }
+
+    function focusToBarcode() {
+        resetScanField();
+        document.getElementById('p_scan_label').focus();
     }
 
     function runFilter() {
@@ -109,7 +186,6 @@
 
         const d = new Date(tglRaw);
         const tglCheck = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
-
         const matchToko = dbPickAuto.find(i => i.tglInput === tglCheck && i.kodeToko === kode);
 
         if (matchToko) {
@@ -126,108 +202,107 @@
             [...new Set(filteredFaktur.map(i => i.faktur))].forEach(f => {
                 fSelect.innerHTML += `<option value="${f}">${f}</option>`;
             });
-        } else {
-            document.getElementById('p_nama').value = "DATA TIDAK DITEMUKAN";
         }
     }
 
-// TAHAP 1: VALIDASI LABEL
-function validateScanLabel() {
-    const scanVal = document.getElementById('p_scan_label').value.trim();
-    const jenisVal = document.getElementById('p_jenis').value;
-    const fakturVal = document.getElementById('p_faktur').value;
-    const kodeTokoPilihan = document.getElementById('p_kode').value.toUpperCase();
+    // --- VALIDASI SCAN ---
+    function validateScanLabel() {
+        const scanVal = document.getElementById('p_scan_label').value.trim();
+        const jenisVal = document.getElementById('p_jenis').value;
+        const fakturVal = document.getElementById('p_faktur').value;
+        const kodeToko = document.getElementById('p_kode').value.toUpperCase();
 
-    if (!fakturVal) { 
-        alert("Pilih Faktur terlebih dahulu!"); 
-        document.getElementById('p_scan_label').value = "";
-        return; 
+        if (jenisVal === "KONTAINER") {
+            const inputRaw = scanVal.toUpperCase();
+            // Cek Duplikasi Lokal
+            let antrian = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+            if (antrian.some(item => item.barcode.toUpperCase() === inputRaw && item.faktur === fakturVal)) {
+                alert("⚠️ KONTAINER SUDAH DI SCAN!");
+                document.getElementById('p_scan_label').value = ""; return;
+            }
+
+            const parts = inputRaw.split('-').filter(p => p !== "");
+            const kontainerMurni = parts[0];
+            const tokoLabel = parts[1];
+
+            if (tokoLabel !== kodeToko) { alert("⚠️ SALAH TOKO!"); document.getElementById('p_scan_label').value = ""; return; }
+
+            const match = dbPickAuto.find(i => i.faktur === fakturVal && i.kontainer === kontainerMurni && i.kodeToko === kodeToko);
+            if (match) {
+                fillData(match);
+                document.getElementById('p_qty_input').value = 1;
+                setTimeout(() => saveData(), 500);
+            } else { alert("⚠️ DATA TIDAK DITEMUKAN!"); document.getElementById('p_scan_label').value = ""; }
+        } else {
+            const parts = scanVal.split('-');
+            const pluLabel = parts[parts.length - 1];
+            const match = dbPickAuto.find(i => i.faktur === fakturVal && i.plu === pluLabel);
+            if (match) {
+                fillData(match);
+                document.getElementById('area_fisik').style.display = 'block';
+                document.getElementById('p_scan_fisik').focus();
+            } else { alert("LABEL DOS TIDAK COCOK!"); }
+        }
     }
 
-    // --- LOGIKA KHUSUS KONTAINER ---
-    if (jenisVal === "KONTAINER") {
-        const inputRaw = scanVal.toUpperCase(); 
-
-        // 1. Cek Duplikasi di antrian lokal
-        let antrian = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-        if (antrian.some(item => item.barcode.toUpperCase() === inputRaw && item.faktur === fakturVal)) {
-            alert("⚠️ KONTAINER SUDAH DI SCAN!");
-            document.getElementById('p_scan_label').value = "";
-            return;
-        }
-
-        // 2. Bedah input "-K0001-R860" menjadi "K0001" dan "R860"
-        const parts = inputRaw.split('-').filter(p => p !== ""); 
-        const kontainerMurni = parts[0]; 
-        const tokoLabel = parts[1];      
-
-        // 3. Validasi Toko
-        if (tokoLabel !== kodeTokoPilihan) {
-            alert("⚠️ BARCODE TIDAK COCOK " );
-            document.getElementById('p_scan_label').value = "";
-            return;
-        }
-
-        // 4. Cari di Database
-        const match = dbPickAuto.find(i => {
-            const dbKontainer = String(i.kontainer || "").trim().toUpperCase();
-            const dbToko = String(i.kodeToko || "").trim().toUpperCase();
-            return i.faktur === fakturVal && dbKontainer === kontainerMurni && dbToko === kodeTokoPilihan;
-        });
-
-        if (match) {
-            document.getElementById('p_plu').value = match.plu || "-";
-            document.getElementById('p_descp').value = match.descp || "-";
-            document.getElementById('p_zona').value = match.zona;
-            document.getElementById('p_qty_data').value = match.qtyData;
-            document.getElementById('p_qty_input').value = 1;
-            document.getElementById('p_qty_input').readOnly = true;
-            
-            setTimeout(() => { saveData(); }, 500);
-        } else {
-            alert("⚠️ DATA TIDAK DITEMUKAN!\nKontainer '" + kontainerMurni + "' tidak ada di faktur ini.");
-            document.getElementById('p_scan_label').value = "";
-        }
-    } 
-    // --- AKHIR LOGIKA KONTAINER ---
-    else {
-        // --- LOGIKA DOS (Tahap 1: Scan Label) ---
-        const partsDos = scanVal.split('-');
-        const pluLabel = partsDos[partsDos.length - 1];
-        
-        const matchDos = dbPickAuto.find(i => i.faktur === fakturVal && i.plu === pluLabel);
-
-        if (matchDos) {
-            document.getElementById('p_plu').value = matchDos.plu || "-";
-            document.getElementById('p_descp').value = matchDos.descp || "-";
-            document.getElementById('p_zona').value = matchDos.zona;
-            document.getElementById('p_qty_data').value = matchDos.qtyData;
-            document.getElementById('area_fisik').style.display = 'block';
-            document.getElementById('p_scan_fisik').focus();
-        } else {
-            alert("BARCODE DOS TIDAK COCOK!");
-            document.getElementById('p_scan_label').value = "";
-        }
-    }
-} 
-
-    // TAHAP 2: VALIDASI FISIK
     function validateScanFisik() {
         const scanFisik = document.getElementById('p_scan_fisik').value.trim();
         const pluTarget = document.getElementById('p_plu').value;
-
-        const isMatch = dbMasterBarcode.find(m => 
-            (m.barcodeDos === scanFisik || m.barcodeItem === scanFisik) && m.plu === pluTarget
-        );
-
+        const isMatch = dbMasterBarcode.find(m => (m.barcodeDos === scanFisik || m.barcodeItem === scanFisik) && m.plu === pluTarget);
         if (isMatch) {
             document.getElementById('p_qty_input').readOnly = false;
-            document.getElementById('p_qty_input').focus();
             document.getElementById('p_qty_input').style.background = "white";
-        } else {
-            alert("BARCODE FISIK TIDAK SESUAI PLU!");
-            document.getElementById('p_scan_fisik').value = "";
-        }
+            document.getElementById('p_qty_input').focus();
+        } else { alert("FISIK TIDAK SESUAI PLU!"); document.getElementById('p_scan_fisik').value = ""; }
+    }
+
+    function fillData(m) {
+        document.getElementById('p_plu').value = m.plu || "-";
+        document.getElementById('p_descp').value = m.descp || "-";
+        document.getElementById('p_zona').value = m.zona;
+        document.getElementById('p_qty_data').value = m.qtyData;
+    }
+
+    // --- STORAGE & SYNC ---
+    function saveData() {
+        const qInput = document.getElementById('p_qty_input').value;
+        if (!qInput) return;
+
+        let q = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+        q.push({
+            tgl: document.getElementById('p_tgl').value,
+            jenis: document.getElementById('p_jenis').value,
+            kode: document.getElementById('p_kode').value,
+            nama: document.getElementById('p_nama').value,
+            urpick: document.getElementById('p_urpick').value,
+            faktur: document.getElementById('p_faktur').value,
+            zona: document.getElementById('p_zona').value,
+            barcode: document.getElementById('p_scan_label').value,
+            plu: document.getElementById('p_plu').value,
+            descp: document.getElementById('p_descp').value,
+            qty_data: document.getElementById('p_qty_data').value,
+            qty_scan: qInput
+        });
+        localStorage.setItem('q_polcek', JSON.stringify(q));
+        resetScanField();
+        updateBadge();
+        alert("Simpan Berhasil!");
+        document.getElementById('p_scan_label').focus();
+    }
+
+    async function syncToServer() {
+        const q = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+        if (q.length === 0) return;
+        document.getElementById('loader').style.display = 'flex';
+        try {
+            const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "syncBatch", data: q }) });
+            if ((await res.json()).status === "success") {
+                localStorage.setItem('q_polcek', "[]");
+                updateBadge();
+                alert("Data Terkirim!");
+            }
+        } catch (e) { alert("Gagal Kirim!"); }
+        document.getElementById('loader').style.display = 'none';
     }
 
     function resetScanField() {
@@ -240,46 +315,13 @@ function validateScanLabel() {
         document.getElementById('p_qty_input').style.background = "#dcdcdc";
     }
 
-    function saveData() {
-        const scanLabel = document.getElementById('p_scan_label').value;
-        const qtyS = document.getElementById('p_qty_input').value;
-        if (!scanLabel || !qtyS) return alert("Lengkapi Scan & Qty!");
-
-        let q = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-        q.push({
-            tgl: document.getElementById('p_tgl').value,
-            jenis: document.getElementById('p_jenis').value,
-            kode: document.getElementById('p_kode').value,
-            nama: document.getElementById('p_nama').value,
-            urpick: document.getElementById('p_urpick').value,
-            faktur: document.getElementById('p_faktur').value,
-            zona: document.getElementById('p_zona').value,
-            barcode: scanLabel,
-            plu: document.getElementById('p_plu').value,
-            descp: document.getElementById('p_descp').value,
-            qty_data: document.getElementById('p_qty_data').value,
-            qty_scan: qtyS
-        });
-        localStorage.setItem('q_polcek', JSON.stringify(q));
-        resetScanField();
-        updateBadge();
-        document.getElementById('p_scan_label').focus();
-    }
-
-    async function syncToServer() {
-        const q = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-        if (q.length === 0) return;
-        document.getElementById('loader').style.display = 'flex';
-        try {
-            const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "syncBatch", data: q }) });
-            const resJson = await res.json();
-            if (resJson.status === "success") {
-                localStorage.setItem('q_polcek', "[]");
-                updateBadge();
-                alert("Data Berhasil Terkirim!");
-            }
-        } catch (e) { alert("Gagal Kirim!"); }
-        document.getElementById('loader').style.display = 'none';
+    function clearAllFields() {
+        if(confirm("Hapus semua?")) {
+            resetScanField();
+            ['p_kode','p_nama','p_urpick'].forEach(id => document.getElementById(id).value = "");
+            document.getElementById('p_faktur').innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
+            document.getElementById('p_kode').focus();
+        }
     }
 
     function updateBadge() { document.getElementById('badge').innerText = JSON.parse(localStorage.getItem('q_polcek') || "[]").length; }
