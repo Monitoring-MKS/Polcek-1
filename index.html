@@ -3,11 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POLCEK WH - PDA SCANNER MODE</title>
+    <title>POLCEK WH - MAKASSAR</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+        /* Tombol Close Pojok Kanan Atas */
+        .btn-close-modal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: #c0392b;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 20001;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
         :root { --green: #70ad47; --orange: #e67e22; --blue: #2980b9; --red: #c0392b; }
         * { box-sizing: border-box; font-family: 'Arial Black', sans-serif; }
         body { background: #b0b0b0; padding: 15px; margin: 0; }
+        
+        #login_screen {
+            position: fixed; inset: 0; background: #2c3e50; z-index: 30000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;
+        }
+        .login-box {
+            background: white; padding: 25px; border-radius: 10px; width: 100%; max-width: 350px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .login-box h2 { text-align: center; margin-bottom: 20px; color: #333; font-size: 18px; }
+
+        .user-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #34495e; color: white; padding: 5px 15px;
+            border-radius: 5px; margin-bottom: 10px; font-size: 12px;
+        }
+        .btn-logout {
+            background: var(--red); color: white; border: none; padding: 5px 10px;
+            border-radius: 3px; cursor: pointer; font-weight: bold; font-size: 10px;
+        }
+
         .header { background: black; color: white; text-align: center; padding: 12px; border-radius: 10px; margin-bottom: 15px; font-size: 14px; }
         .input-row { display: flex; align-items: center; margin-bottom: 8px; gap: 8px; }
         .label { width: 110px; padding: 10px; font-size: 10px; color: white; border-radius: 5px; font-weight: bold; background: var(--green); text-transform: uppercase; }
@@ -22,292 +65,801 @@
 
 <div id="loader"><p>SINKRONISASI DATA...</p></div>
 
-<div class="header">VALIDASI PENYIAPAN BARANG (PDA MODE)</div>
-
-<div class="input-row"><div class="label">TGL PROSES</div><input type="date" id="p_tgl" onchange="runFilter()"></div>
-<div class="input-row">
-    <div class="label">KD TOKO</div>
-    <input type="text" id="p_kode" placeholder="Scan/Ketik..." onchange="processStoreInput()">
-</div>
-<div class="input-row"><div class="label">NAMA TOKO</div><input type="text" id="p_nama" readonly></div>
-<div class="input-row"><div class="label">URPICK</div><input type="text" id="p_urpick" readonly></div>
-
-<div class="input-row">
-    <div class="label" style="background:var(--blue)">JENIS</div>
-    <select id="p_jenis" onchange="focusToFaktur()">
-        <option value="">-- PILIH JENIS --</option>
-        <option value="KONTAINER">KONTAINER</option>
-        <option value="DOS">DOS</option>
-    </select>
-</div>
-<div class="input-row">
-    <div class="label">NO FAKTUR</div>
-    <select id="p_faktur" onchange="focusToBarcode()">
-        <option value="">-- PILIH FAKTUR --</option>
-    </select>
-</div>
-
-<hr style="border: 1px solid #999; margin: 15px 0;">
-
-<div class="input-row">
-    <div class="label" style="background: var(--orange);">1. SCAN LABEL</div>
-    <input type="text" id="p_scan_label" placeholder="Scan Barcode Label..." onchange="validateScanLabel()">
-</div>
-
-<div id="area_fisik" style="display:none; border: 2px solid var(--red); padding: 10px; border-radius: 5px; margin-bottom: 8px;">
-    <div class="input-row">
-        <div class="label" style="background: var(--red);">2. SCAN FISIK</div>
-        <input type="text" id="p_scan_fisik" placeholder="Scan Barcode Item..." onchange="validateScanFisik()">
+<div id="login_screen">
+    <div class="login-box">
+        <div style="text-align: center; font-size: 12px; color: #7f8c8d; margin-bottom: 5px; font-family: monospace;">
+            V.01.02.26@ mks-bersatu
+        </div>
+        <h2>LOGIN POLCEK</h2>
+        <div class="input-row"><input type="text" id="l_nik" placeholder="NIK" onchange="checkNIK()"></div>
+        <div class="input-row"><input type="text" id="l_nama" placeholder="NAMA" readonly></div>
+        <div class="input-row"><input type="password" id="l_pass" placeholder="PASSWORD"></div>
+        <button class="btn-main" style="background:var(--green); width:100%; margin-top:10px;" onclick="doLogin()">MASUK APLIKASI</button>
     </div>
 </div>
 
-<div class="input-row"><div class="label">PLU</div><input type="text" id="p_plu" readonly></div>
-<div class="input-row"><div class="label">BARANG</div><input type="text" id="p_descp" readonly></div>
-<div class="input-row"><div class="label">ZONA</div><input type="text" id="p_zona" readonly></div>
-<div class="input-row">
-    <div class="label" style="background: #2c3e50;">QTY SCAN</div>
-    <input type="number" id="p_qty_input" placeholder="0" readonly>
-</div>
+<div id="main_app" style="display:none;">
+    <div class="header">POLCEK - WH MAKASSAR <br><span style="font-size: 9px; color: yellow;">V.01.02.26@ mks-bersatu</span></div>
+    <div class="user-bar"><span>Petugas: <b id="display_user">---</b></span><button class="btn-logout" onclick="doLogout()">LOGOUT</button></div>
 
-<input type="hidden" id="p_qty_data">
+    <div class="input-row"><div class="label">TGL PROSES</div><input type="date" id="p_tgl" onchange="setFocus('p_jenis')"></div>
+    <div class="input-row">
+        <div class="label" style="background:var(--blue)">JENIS</div>
+        <select id="p_jenis" onchange="handleJenisChange()">
+            <option value="">-- PILIH JENIS --</option>
+            <option value="KONTAINER">KONTAINER</option>
+            <option value="DOS">DOS</option>
+            <option value="MANUAL">MANUAL</option>
+            <option value="TAG I">TAG I</option>
+            <option value="TELUR">TELUR</option>
+            <option value="MKT">MKT</option>
+            <option value="ATK GS">ATK GS</option>
+            <option value="MATERAI">MATERAI</option>
+        </select>
+    </div>
+    <div class="input-row"><div class="label">KD TOKO</div><input type="text" id="p_kode" placeholder="Scan/Ketik..." onchange="processStoreInput()"></div>
+    <div class="input-row"><div class="label">NAMA TOKO</div><input type="text" id="p_nama" readonly></div>
+    <div class="input-row"><div class="label">URPICK</div><input type="text" id="p_urpick" readonly></div>
+    <div class="input-row"><div class="label">NO FAKTUR</div><select id="p_faktur" onchange="focusToNext()"><option value="">-- PILIH FAKTUR --</option></select></div>
 
-<div class="footer">
-    <button class="btn-main" style="background:#2ecc71" onclick="saveData()">SIMPAN</button>
-    <button class="btn-main" style="background:#34495e" onclick="clearAllFields()">CLEAR</button>
-    <button class="btn-main" style="background:red" onclick="syncToServer()">🚀 KIRIM (<span id="badge">0</span>)</button>
+    <hr style="border: 1px solid #999; margin: 15px 0;">
+
+    <div class="input-row" id="row_scan_label"><div class="label" style="background: var(--orange);">SCAN LABEL</div><input type="text" id="p_scan_label" placeholder="Scan Label..." onchange="validateScanLabel()"></div>
+    <div id="area_fisik" style="display:none; border: 2px solid var(--red); padding: 10px; border-radius: 5px; margin-bottom: 8px;">
+        <div class="input-row"><div class="label" style="background: var(--red);">SCAN FISIK</div><input type="text" id="p_scan_fisik" placeholder="Scan Barcode Produk..." onchange="validateScanFisik()"></div>
+    </div>
+    <div class="input-row"><div class="label">PLU</div><input type="text" id="p_plu" readonly></div>
+    <div class="input-row"><div class="label">DESCP</div><input type="text" id="p_descp" readonly></div>
+    <div class="input-row"><div class="label">ZONA</div><input type="text" id="p_zona" readonly></div>
+    <div class="input-row"><div class="label" style="background: #2c3e50;">QTY SCAN</div><input type="number" id="p_qty_input" placeholder="0" readonly></div>
+    <input type="hidden" id="p_qty_data">
+
+    <div class="footer">
+        <button class="btn-main" style="background:#2ecc71" onclick="saveData()">SIMPAN</button>
+        <button class="btn-main" style="background:#8e44ad" onclick="showReport()">FINAL</button>
+        <button class="btn-main" style="background:#34495e" onclick="clearAllFields()">CLEAR</button>
+        <button class="btn-main" style="background:#2c3e50; border: 1px solid yellow; color: yellow;" onclick="showMonitoring()">MONITOR</button>
+    </div>
+    <div style="background: black; color: yellow; text-align: center; padding: 5px; font-size: 11px; margin-top: 5px; border-radius: 5px;">
+        ANTRIAN BELUM FINAL: <span id="badge">0</span> ITEM
+    </div>
+</div> 
+
+<div id="modal_report" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:20000; overflow-y:auto; padding:10px;">
+    <div style="background:white; border-radius:10px; padding:15px; min-height:100%; position: relative;">
+        <button class="btn-close-modal" onclick="closeMonitoring()">×</button>
+        <h3 id="report_title" style="text-align:center; margin-top:0;">DATA COMPARE</h3>
+        <div id="report_info" style="font-size:12px; margin-bottom:10px; border-bottom:1px solid #ccc; padding-bottom:5px;"></div>
+        <div id="report_container" style="overflow-x:auto;">
+            <table border="1" style="width:100%; border-collapse:collapse; font-size:11px; text-align:center;">
+                <thead id="report_head">
+                    <tr style="background:#eee;"><th>ITEM / KOLI</th><th>TARGET</th><th>SCAN</th><th>STATUS</th></tr>
+                </thead>
+                <tbody id="report_body"></tbody>
+            </table>
+        </div>
+        <div id="report_footer" style="margin-top:20px; display:flex; gap:10px;">
+            <button class="btn-main" style="background:#34495e" onclick="closeMonitoring()">TUTUP</button>
+            <button id="btn_finalisasi" class="btn-main" style="background:#27ae60" onclick="prosesFinalisasi()">FINALISASI</button>
+        </div>
+    </div>
 </div>
 
 <script>
-    const G_URL = "https://script.google.com/macros/s/AKfycbyQcJnA4-d9EUJ4u5nuaVkNjYPeY8e7g_UtpVKYeBku_cTnJWLKDlchbF84o3QJgg/exec"; 
-    let dbPickAuto = [];
-    let dbMasterBarcode = [];
+    const G_URL = "https://script.google.com/macros/s/AKfycbyWE7c8RnrnLrp2FINWXS6kj7FXOpAj6VUAmG3qC9yN5K6WfFzgL99inFRg9ivos3s/exec"; 
+    let dbPickAuto = [], dbMasterBarcode = [], dbManual = [];
+    let currentUser = "";
 
-    async function initApp() {
-        document.getElementById('loader').style.display = 'flex';
-        document.getElementById('p_tgl').valueAsDate = new Date();
-        try {
-            const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "getAllData" }) });
-            const out = await res.json();
-            if (out.status === "success") {
-                dbPickAuto = out.pickAuto;
-                dbMasterBarcode = out.masterBarcode;
-            }
-        } catch (e) { alert("Gagal Load Data!"); }
-        document.getElementById('loader').style.display = 'none';
-        document.getElementById('p_kode').focus(); // Awal aplikasi fokus ke Kode Toko
-        updateBadge();
+    const usersDB = [{ nik: "10030732", nama: "URIP PRADIPTA", pass: "234" }];
+
+    let CACHED_DATA = null; // Tempat menyimpan data master & scan
+    
+
+async function loadInitialData(force = false) {
+    if (CACHED_DATA && !force) return CACHED_DATA;
+    try {
+        const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "getAllData" }) });
+        CACHED_DATA = await res.json();
+        return CACHED_DATA;
+    } catch (e) {
+        console.error("Gagal sinkron:", e);
+        return null;
+    }
+}
+
+    function closeMonitoring() {
+        document.getElementById('modal_report').style.display = 'none';
+        document.getElementById('report_head').style.display = ''; 
+        document.getElementById('btn_finalisasi').style.display = 'block';
+        document.getElementById('report_title').innerText = "DATA COMPARE";
     }
 
-    // --- LOGIKA FOCUS PDA ---
+    async function initApp() {
+    document.getElementById('loader').style.display = 'flex';
+    document.getElementById('p_tgl').valueAsDate = new Date();
+    try {
+        // Gunakan loadInitialData agar CACHED_DATA terisi sejak awal
+        const out = await loadInitialData(true);
+        if (out && out.status === "success") {
+            dbPickAuto = out.pickAuto;
+            dbMasterBarcode = out.masterBarcode;
+            dbManual = out.dataManual || [];
+            console.log("Database Ready");
+        }
+    } catch (e) { console.error(e); }
+    document.getElementById('loader').style.display = 'none';
+    updateBadge();
+}
+
+    // --- REAL-TIME MONITORING FUNCTION ---
+    async function showMonitoring() {
+    const tglRaw = document.getElementById('p_tgl').value;
+    if (!tglRaw) return Swal.fire("Pilih Tanggal", "Set tanggal terlebih dahulu", "warning");
+
+    // pastikan cache ada
+    if (!CACHED_DATA) {
+        await loadInitialData();
+    }
+
+    const d = new Date(tglRaw);
+    const tglCheck = d.getFullYear() + '-' +
+        ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
+        ('0' + d.getDate()).slice(-2);
+
+    const dataSudahPolcek = MONITOR_CACHE.length
+        ? MONITOR_CACHE
+        : (CACHED_DATA.dataSudahPolcek || []);
+
+    let monitorMap = {};
+
+    // 1️⃣ TARGET
+    const allTarget = [
+        ...CACHED_DATA.pickAuto,
+        ...(CACHED_DATA.dataManual || [])
+    ].filter(i => i.tglInput === tglCheck);
+
+    allTarget.forEach(item => {
+        const key = `${item.urpick}-${item.kodeToko}`;
+        if (!monitorMap[key]) {
+            monitorMap[key] = {
+                urpick: item.urpick,
+                kode: item.kodeToko,
+                nama: item.namaToko,
+                target: { KL: 0, DS: 0, MN: 0 },
+                scan: { KL: 0, DS: 0, MN: 0 }
+            };
+        }
+
+        const kVal = (item.kontainer || "").toUpperCase();
+        if (kVal.includes("DOS")) {
+            monitorMap[key].target.DS += parseInt(item.qtyData || 0);
+        } else if (!kVal || kVal === "MANUAL") {
+            monitorMap[key].target.MN += parseInt(item.qtyData || 0);
+        } else {
+            monitorMap[key].target.KL += 1;
+        }
+    });
+
+    // 2️⃣ SCAN
+    dataSudahPolcek.forEach(s => {
+        if (s.tgl === tglCheck) {
+            const key = `${s.urpick}-${s.kode}`;
+            if (!monitorMap[key]) return;
+
+            const j = s.jenis.toUpperCase();
+            if (j === "KONTAINER") monitorMap[key].scan.KL += 1;
+            else if (j === "DOS") monitorMap[key].scan.DS += Number(s.qty_scan || 0);
+            else if (j === "MANUAL") monitorMap[key].scan.MN += Number(s.qty_scan || 0);
+        }
+    });
+
+    renderMonitorTable(monitorMap, tglCheck);
+}
+
+
+function renderMonitorTable(monitorMap, tgl) {
+    let html = `
+        <table style="width:100%; border-collapse:collapse; font-size:10px; border:1px solid #444;">
+            <thead>
+                <tr style="background:#2c3e50; color:white;">
+                    <th rowspan="2" style="border:1px solid #444;">URP</th>
+                    <th rowspan="2" style="border:1px solid #444;">TOKO</th>
+                    <th colspan="3" style="border:1px solid #444;">TARGET</th>
+                    <th colspan="3" style="border:1px solid #444;">SCAN</th>
+                    <th rowspan="2" style="border:1px solid #444;">ST</th>
+                </tr>
+                <tr style="background:#34495e; color:white;">
+                    <th>KL</th><th>DS</th><th>MN</th><th>KL</th><th>DS</th><th>MN</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+    const sortedKeys = Object.keys(monitorMap).sort((a, b) => parseInt(monitorMap[a].urpick) - parseInt(monitorMap[b].urpick));
+
+    sortedKeys.forEach(k => {
+        const m = monitorMap[k];
+        const isDone = (m.scan.KL >= m.target.KL && m.scan.DS >= m.target.DS && m.scan.MN >= m.target.MN);
+        const hasStarted = (m.scan.KL + m.scan.DS + m.scan.MN > 0);
+        const rowStyle = isDone ? "background:#d4edda;" : (hasStarted ? "background:#fff3cd;" : "");
+
+        html += `
+            <tr style="${rowStyle} text-align:center; border-bottom:1px solid #ccc;">
+                <td style="padding:5px;">${m.urpick}</td>
+                <td style="text-align:left; padding-left:3px;"><b>${m.kode}</b></td>
+                <td>${m.target.KL}</td><td>${m.target.DS}</td><td>${m.target.MN}</td>
+                <td style="font-weight:bold; color:blue;">${m.scan.KL}</td>
+                <td style="font-weight:bold; color:blue;">${m.scan.DS}</td>
+                <td style="font-weight:bold; color:blue;">${m.scan.MN}</td>
+                <td>${isDone ? '✅' : '⏳'}</td>
+            </tr>`;
+    });
+
+    html += `</tbody></table>`;
+
+    // Pengaturan UI agar tidak bertumpuk
+    document.getElementById('report_title').innerText = "REAL-TIME MONITORING";
+    document.getElementById('report_info').innerHTML = `<b>TANGGAL: ${tgl}</b>`;
+    document.getElementById('report_head').style.display = 'none'; // Sembunyikan header Compare
+    document.getElementById('btn_finalisasi').style.display = 'none'; // Sembunyikan tombol kirim
+    document.getElementById('report_body').innerHTML = `<tr><td colspan="4" style="padding:0;">${html}</td></tr>`;
+    document.getElementById('modal_report').style.display = 'block';
+}
+
+    // --- FUNGSI LOGIN ---
+    function checkNIK() {
+        const nikInput = document.getElementById('l_nik').value;
+        const user = usersDB.find(u => u.nik === nikInput);
+        if (user) {
+            document.getElementById('l_nama').value = user.nama;
+            setFocus('l_pass');
+        } else {
+            document.getElementById('l_nama').value = "";
+            Swal.fire("Error", "NIK Tidak Terdaftar!", "error");
+        }
+    }
+
+    function doLogin() {
+        const nik = document.getElementById('l_nik').value;
+        const pass = document.getElementById('l_pass').value;
+        const user = usersDB.find(u => u.nik === nik && u.pass === pass);
+        if (user) {
+            currentUser = user.nama; 
+            document.getElementById('display_user').innerText = currentUser;
+            document.getElementById('login_screen').style.display = 'none';
+            document.getElementById('main_app').style.display = 'block';
+
+	initMonitoring();
+
+            notify("Ewako!!!Selamat Bekerja, " + currentUser);
+        } else { Swal.fire("Gagal", "Password Salah!", "error"); }
+    }
+
+    function doLogout() {
+        Swal.fire({
+            title: 'Logout?', text: "Pastikan data antrian sudah di-finalisasi.", icon: 'warning',
+            showCancelButton: true, confirmButtonColor: '#c0392b', confirmButtonText: 'Ya, Logout'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                currentUser = "";
+                document.getElementById('login_screen').style.display = 'flex';
+                document.getElementById('main_app').style.display = 'none';
+            }
+localStorage.removeItem('monitoring_polcek');
+MONITOR_CACHE = [];
+CACHED_DATA = null;
+
+        });
+    }
+
+    // --- FUNGSI PROSES ---
     function setFocus(id) {
         setTimeout(() => {
             const el = document.getElementById(id);
-            if (el) {
-                el.focus();
-                el.select(); // Pilih teks agar jika scan ulang langsung tertimpa
-            }
-        }, 300); // Jeda agar keyboard mobile muncul dan alert benar-benar tertutup
+            if (el) { el.focus(); if (typeof el.select === 'function') el.select(); }
+        }, 350);
+    }
+
+    function notify(msg, type = 'success', nextId = 'p_scan_label') {
+        Swal.fire({ title: msg, icon: type, timer: 1500, showConfirmButton: false, didClose: () => { setFocus(nextId); }});
+    }
+
+    function handleJenisChange() {
+        const jenis = document.getElementById('p_jenis').value;
+        const butuhScan = ["KONTAINER", "DOS", "MANUAL", "TAG I"];
+        document.getElementById('row_scan_label').style.display = butuhScan.includes(jenis) ? 'flex' : 'none';
+        if (document.getElementById('p_kode').value) runFilter();
+        setFocus('p_kode');
     }
 
     function extractStoreCode(text) {
+        if(!text.includes('-')) return text.toUpperCase();
         const parts = text.toUpperCase().split('-').filter(p => p !== "");
-        if (text.toUpperCase().includes("DOS")) return parts[2] || text;
-        return parts[1] || text;
+        return text.toUpperCase().includes("DOS") ? (parts[2] || text) : (parts[1] || text);
     }
 
     function processStoreInput() {
         const el = document.getElementById('p_kode');
         if (!el.value) return;
         el.value = extractStoreCode(el.value);
-        runFilter();
-        setFocus('p_jenis');
-    }
-
-    function focusToFaktur() {
-        runFilter();
+        runFilter(); 
         setFocus('p_faktur');
-    }
-
-    function focusToBarcode() {
-        resetScanField();
-        setFocus('p_scan_label');
     }
 
     function runFilter() {
         const tglRaw = document.getElementById('p_tgl').value;
-        const kode = document.getElementById('p_kode').value.trim().toUpperCase();
         const jenis = document.getElementById('p_jenis').value;
+        const kode = document.getElementById('p_kode').value.trim().toUpperCase();
         const fSelect = document.getElementById('p_faktur');
-
-        if (!tglRaw || !kode) return;
+        if (!tglRaw || !kode || !jenis) return;
 
         const d = new Date(tglRaw);
         const tglCheck = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
-        const matchToko = dbPickAuto.find(i => i.tglInput === tglCheck && i.kodeToko === kode);
+        const currentDB = (jenis === "MANUAL") ? dbManual : dbPickAuto;
 
-        if (matchToko) {
-            document.getElementById('p_nama').value = matchToko.namaToko;
-            document.getElementById('p_urpick').value = matchToko.urpick;
-            
-            const filteredFaktur = dbPickAuto.filter(item => {
-                const isMatch = (item.tglInput === tglCheck && item.kodeToko === kode);
-                const isDos = item.kontainer.toUpperCase().includes("DOS");
-                return jenis === "KONTAINER" ? (isMatch && !isDos) : (isMatch && isDos);
-            });
+        const filtered = currentDB.filter(item => {
+            const matchTglStore = (item.tglInput === tglCheck && item.kodeToko === kode);
+            if (!matchTglStore) return false;
+            if (jenis === "MANUAL" || ["TAG I", "NON LOKASI", "TELUR", "MKT", "ATK GS", "MATERAI"].includes(jenis)) return true;
+            const kVal = (item.kontainer || "").toUpperCase();
+            const isDos = kVal.includes("DOS");
+            return jenis === "KONTAINER" ? !isDos : isDos;
+        });
 
-            fSelect.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
-            [...new Set(filteredFaktur.map(i => i.faktur))].forEach(f => {
-                fSelect.innerHTML += `<option value="${f}">${f}</option>`;
-            });
+        fSelect.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
+        if (filtered.length > 0) {
+            document.getElementById('p_nama').value = filtered[0].namaToko;
+            document.getElementById('p_urpick').value = filtered[0].urpick;
+            [...new Set(filtered.map(i => i.faktur))].forEach(f => { fSelect.innerHTML += `<option value="${f}">${f}</option>`; });
         }
     }
 
-    // --- VALIDASI SCAN ---
+    function focusToNext() {
+        resetScanField();
+        const jenis = document.getElementById('p_jenis').value;
+        if (["KONTAINER", "DOS", "MANUAL", "TAG I"].includes(jenis)) {
+            setFocus('p_scan_label');
+        } else {
+            const qtyInp = document.getElementById('p_qty_input');
+            qtyInp.readOnly = false; qtyInp.style.background = "white";
+            document.getElementById('p_scan_label').value = "NON-SCAN";
+            setFocus('p_qty_input');
+        }
+    }
+
+    function updateBadge() { document.getElementById('badge').innerText = JSON.parse(localStorage.getItem('q_polcek') || "[]").length; }
+
     function validateScanLabel() {
         const scanVal = document.getElementById('p_scan_label').value.trim();
         const jenisVal = document.getElementById('p_jenis').value;
         const fakturVal = document.getElementById('p_faktur').value;
         const kodeToko = document.getElementById('p_kode').value.toUpperCase();
-
         if (!scanVal) return;
+        const parts = scanVal.split('-').filter(Boolean);
 
         if (jenisVal === "KONTAINER") {
-            const inputRaw = scanVal.toUpperCase();
+            const koliScan = parts[0].toUpperCase();
             let antrian = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-            if (antrian.some(item => item.barcode.toUpperCase() === inputRaw && item.faktur === fakturVal)) {
-                alert("⚠️ KONTAINER SUDAH DI SCAN!");
+            if (antrian.some(item => item.barcode.toUpperCase().includes(koliScan) && item.kode.toUpperCase() === kodeToko && item.faktur === fakturVal)) {
                 document.getElementById('p_scan_label').value = "";
-                setFocus('p_scan_label');
-                return;
+                return notify("⚠️ SUDAH SCAN KOLI TERSEBUT!", "error", "p_scan_label");
             }
-
-            const parts = inputRaw.split('-').filter(p => p !== "");
-            const kontainerMurni = parts[0];
-            const tokoLabel = parts[1];
-
-            if (tokoLabel !== kodeToko) { 
-                alert("⚠️ SALAH TOKO!"); 
-                document.getElementById('p_scan_label').value = ""; 
-                setFocus('p_scan_label');
-                return; 
-            }
-
-            const match = dbPickAuto.find(i => i.faktur === fakturVal && i.kontainer === kontainerMurni && i.kodeToko === kodeToko);
-            if (match) {
-                fillData(match);
-                document.getElementById('p_qty_input').value = 1;
-                setTimeout(() => saveData(), 500);
-            } else { 
-                alert("⚠️ DATA TIDAK DITEMUKAN!"); 
-                document.getElementById('p_scan_label').value = ""; 
-                setFocus('p_scan_label');
-            }
-        } else {
-            const parts = scanVal.split('-');
+            const match = dbPickAuto.find(i => i.faktur === fakturVal && i.kodeToko === kodeToko && (i.kontainer || "").toUpperCase() === koliScan);
+            if (match) { 
+                fillData(match); 
+                document.getElementById('p_qty_input').value = 1; 
+                document.getElementById('p_qty_input').readOnly = false;
+                setTimeout(() => saveData(), 500); 
+            } else { notify("⚠️ KOLI TIDAK COCOK!", "error", "p_scan_label"); document.getElementById('p_scan_label').value = ""; }
+        } else if (jenisVal === "DOS" || jenisVal === "MANUAL") {
             const pluLabel = parts[parts.length - 1];
-            const match = dbPickAuto.find(i => i.faktur === fakturVal && i.plu === pluLabel);
-            if (match) {
-                fillData(match);
-                document.getElementById('area_fisik').style.display = 'block';
-                setFocus('p_scan_fisik');
-            } else { 
-                alert("LABEL DOS TIDAK COCOK!"); 
-                document.getElementById('p_scan_label').value = "";
-                setFocus('p_scan_label');
-            }
+            const currentDB = (jenisVal === "MANUAL") ? dbManual : dbPickAuto;
+            const match = currentDB.find(i => i.faktur === fakturVal && String(i.plu) === String(pluLabel));
+            if (match) { 
+                fillData(match); 
+                document.getElementById('area_fisik').style.display = 'block'; 
+                setFocus('p_scan_fisik'); 
+            } else { notify("⚠️ LABEL TIDAK COCOK!", "error", "p_scan_label"); document.getElementById('p_scan_label').value = ""; }
+        } else if (jenisVal === "TAG I") {
+            document.getElementById('p_plu').value = "TAG-I";
+            document.getElementById('p_descp').value = "RECORD SCAN TAG I";
+            document.getElementById('p_qty_input').readOnly = false;
+            document.getElementById('p_qty_input').style.background = "white";
+            setFocus('p_qty_input');
         }
     }
 
     function validateScanFisik() {
         const scanFisik = document.getElementById('p_scan_fisik').value.trim();
-        const pluTarget = document.getElementById('p_plu').value;
-        if (!scanFisik) return;
-
-        const isMatch = dbMasterBarcode.find(m => (m.barcodeDos === scanFisik || m.barcodeItem === scanFisik) && m.plu === pluTarget);
-        if (isMatch) {
-            document.getElementById('p_qty_input').readOnly = false;
-            document.getElementById('p_qty_input').style.background = "white";
-            setFocus('p_qty_input');
-        } else { 
-            alert("FISIK TIDAK SESUAI PLU!"); 
-            document.getElementById('p_scan_fisik').value = ""; 
-            setFocus('p_scan_fisik');
-        }
+        const pluTarget = String(document.getElementById('p_plu').value).trim();
+        const qtyInp = document.getElementById('p_qty_input');
+        if (!pluTarget || pluTarget === "-") return notify("⚠️ SCAN LABEL DULU!", "error", "p_scan_label");
+        const match = dbMasterBarcode.find(m => (scanFisik === String(m.barcodeDos).trim() || scanFisik === String(m.barcodeItem).trim()) && String(m.plu).trim() === pluTarget);
+        if (match) { qtyInp.readOnly = false; qtyInp.style.background = "white"; setFocus('p_qty_input'); }
+        else { notify("⚠️ FISIK SALAH!", "error", "p_scan_fisik"); document.getElementById('p_scan_fisik').value = ""; }
     }
 
     function fillData(m) {
+        const jenis = document.getElementById('p_jenis').value;
+        const faktur = document.getElementById('p_faktur').value;
+        const kodeToko = document.getElementById('p_kode').value.toUpperCase();
         document.getElementById('p_plu').value = m.plu || "-";
         document.getElementById('p_descp').value = m.descp || "-";
-        document.getElementById('p_zona').value = m.zona;
-        document.getElementById('p_qty_data').value = m.qtyData;
+        document.getElementById('p_zona').value = m.zona || "-";
+        let totalTargetToko = 0;
+        const currentDB = (jenis === "MANUAL") ? dbManual : dbPickAuto;
+        currentDB.forEach(item => { if (item.faktur === faktur && item.kodeToko === kodeToko && item.plu === m.plu) totalTargetToko += parseInt(item.qtyData || 0); });
+        if (jenis === "KONTAINER") totalTargetToko = 1;
+        document.getElementById('p_qty_data').value = totalTargetToko;
     }
 
     function saveData() {
-        const qInput = document.getElementById('p_qty_input').value;
-        if (!qInput || qInput <= 0) {
-            alert("Qty harus diisi!");
-            setFocus('p_qty_input');
-            return;
-        }
-
+        const qtyInp = document.getElementById('p_qty_input');
+        const jenis = document.getElementById('p_jenis').value;
+        const kodeToko = document.getElementById('p_kode').value.toUpperCase();
+        const fakturVal = document.getElementById('p_faktur').value;
+        const pluVal = document.getElementById('p_plu').value;
+        if (!qtyInp.value || qtyInp.value <= 0) return notify("Isi Qty!", "error", "p_qty_input");
         let q = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-        q.push({
-            tgl: document.getElementById('p_tgl').value,
-            jenis: document.getElementById('p_jenis').value,
-            kode: document.getElementById('p_kode').value,
-            nama: document.getElementById('p_nama').value,
-            urpick: document.getElementById('p_urpick').value,
-            faktur: document.getElementById('p_faktur').value,
-            zona: document.getElementById('p_zona').value,
-            barcode: document.getElementById('p_scan_label').value,
-            plu: document.getElementById('p_plu').value,
-            descp: document.getElementById('p_descp').value,
-            qty_data: document.getElementById('p_qty_data').value,
-            qty_scan: qInput
-        });
+        const idx = q.findIndex(i => i.plu === pluVal && i.faktur === fakturVal && i.kode === kodeToko && i.jenis === jenis);
+        if (idx !== -1 && jenis !== "KONTAINER") q[idx].qty_scan = parseInt(q[idx].qty_scan) + parseInt(qtyInp.value);
+        else {
+            q.push({
+                tgl: document.getElementById('p_tgl').value, jenis: jenis, kode: kodeToko,
+                nama: document.getElementById('p_nama').value, urpick: document.getElementById('p_urpick').value,
+                faktur: fakturVal, zona: document.getElementById('p_zona').value, barcode: document.getElementById('p_scan_label').value,
+                plu: pluVal, descp: document.getElementById('p_descp').value, qty_data: parseInt(document.getElementById('p_qty_data').value),
+                qty_scan: parseInt(qtyInp.value), petugas: currentUser
+            });
+        }
         localStorage.setItem('q_polcek', JSON.stringify(q));
-        resetScanField();
-        updateBadge();
-        alert("Simpan Berhasil!");
-        setFocus('p_scan_label');
+        updateBadge(); resetScanField(); focusToNext();
     }
 
+// Panggil ini SETELAH data berhasil terkirim ke Google Sheets
+function autoSyncLocal(dataBaru) {
+    if (!CACHED_DATA) return;
+
+    dataBaru.forEach(item => {
+        const row = {
+            tgl: item.tgl,
+            kode: item.kode,
+            urpick: item.urpick,
+            jenis: item.jenis,
+            qty_scan: item.qty_scan
+        };
+
+        CACHED_DATA.dataSudahPolcek.push(row);
+        MONITOR_CACHE.push(row);
+    });
+
+    localStorage.setItem('monitoring_polcek', JSON.stringify(MONITOR_CACHE));
+
+    if (document.getElementById('modal_report').style.display === 'block') {
+        showMonitoring();
+    }
+}
+
+
     function resetScanField() {
-        ['p_scan_label','p_scan_fisik','p_plu','p_descp','p_zona','p_qty_input','p_qty_data'].forEach(id => {
-            const el = document.getElementById(id);
-            if(el) el.value = "";
-        });
+        ['p_scan_label','p_scan_fisik','p_plu','p_descp','p_zona','p_qty_input','p_qty_data'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; });
         document.getElementById('area_fisik').style.display = 'none';
-        document.getElementById('p_qty_input').readOnly = true;
-        document.getElementById('p_qty_input').style.background = "#dcdcdc";
+        const qtyInp = document.getElementById('p_qty_input');
+        qtyInp.readOnly = true; qtyInp.style.background = "#dcdcdc";
     }
 
     function clearAllFields() {
-        if(confirm("Hapus semua inputan?")) {
+        if(confirm("Hapus Semua?")) {
             resetScanField();
             ['p_kode','p_nama','p_urpick'].forEach(id => document.getElementById(id).value = "");
             document.getElementById('p_faktur').innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
-            setFocus('p_kode');
+            setFocus('p_tgl');
         }
     }
 
-    async function syncToServer() {
-        const q = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-        if (q.length === 0) return;
-        document.getElementById('loader').style.display = 'flex';
-        try {
-            const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "syncBatch", data: q }) });
-            if ((await res.json()).status === "success") {
-                localStorage.setItem('q_polcek', "[]");
-                updateBadge();
-                alert("Data Terkirim!");
-                setFocus('p_scan_label');
-            }
-        } catch (e) { alert("Gagal Kirim!"); }
-        document.getElementById('loader').style.display = 'none';
+    function showReport() {
+        const tglRaw = document.getElementById('p_tgl').value;
+        const kode = document.getElementById('p_kode').value.trim().toUpperCase();
+        const jenis = document.getElementById('p_jenis').value;
+        const faktur = document.getElementById('p_faktur').value;
+        if (!tglRaw || !kode || !faktur) return Swal.fire("Peringatan", "Lengkapi data Toko dan Faktur!", "warning");
+
+        const scanDB = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+        const aktualData = scanDB.filter(i => i.tgl === tglRaw && i.kode === kode && i.faktur === faktur && i.jenis === jenis);
+
+        const d = new Date(tglRaw);
+        const tglCheck = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+        
+        let reportMap = {};
+        let isAllMatch = true;
+        let isComparisonType = ["KONTAINER", "DOS", "MANUAL"].includes(jenis);
+
+        if (isComparisonType) {
+            const currentDB = (jenis === "MANUAL") ? dbManual : dbPickAuto;
+            const targetData = currentDB.filter(i => {
+                if (!(i.tglInput === tglCheck && i.kodeToko === kode && i.faktur === faktur)) return false;
+                const kVal = (i.kontainer || "").toUpperCase();
+                const isD = kVal.includes("DOS");
+                return jenis === "KONTAINER" ? !isD : (jenis === "DOS" ? isD : true);
+            });
+
+            targetData.forEach(item => {
+                const kMaster = (item.kontainer || "MANUAL").toUpperCase();
+                let key = (jenis === "KONTAINER") ? kMaster : (jenis === "DOS" ? `${kMaster} | ${item.plu}` : item.plu);
+                if (!reportMap[key]) reportMap[key] = { desc: item.descp || kMaster, target: 0, scan: 0 };
+                reportMap[key].target += (jenis === "KONTAINER") ? 1 : parseInt(item.qtyData || 0);
+            });
+
+            aktualData.forEach(item => {
+                const parts = (item.barcode || "").split('-').filter(Boolean);
+                let keyScan = (jenis === "KONTAINER") ? parts[0].toUpperCase() : (jenis === "DOS" ? `${parts[0]}-${parts[1]} | ${item.plu}`.toUpperCase() : (parts[parts.length - 1] || item.plu));
+                if (reportMap[keyScan]) reportMap[keyScan].scan += parseInt(item.qty_scan || 0);
+                else reportMap[keyScan] = { desc: item.descp || "OVER", target: 0, scan: parseInt(item.qty_scan || 0) };
+            });
+        } else {
+            aktualData.forEach(item => {
+                const key = item.barcode || item.plu || "ITEM";
+                reportMap[key] = { desc: item.descp || "DATA INPUT", target: "N/A", scan: parseInt(item.qty_scan || 0) };
+            });
+        }
+
+        let html = "";
+        Object.keys(reportMap).forEach(key => {
+            const r = reportMap[key];
+            const status = (r.target === "N/A" || r.scan === r.target) ? "MATCH" : (r.scan < r.target ? "PENDING" : "OVER");
+            if (status !== "MATCH") isAllMatch = false;
+            html += `<tr style="background:${status === 'MATCH' ? '#d4edda' : (status === 'PENDING' ? '#f8d7da' : '#fff3cd')}">
+                <td style="text-align:left; padding:5px;"><b>${key}</b><br><small>${r.desc}</small></td><td>${r.target}</td><td>${r.scan}</td>
+                <td><b>${status}</b><br><button onclick="revisiQty('${key}', '${key.includes(' | ') ? key.split(' | ')[1] : key}')" style="font-size:10px; background:#f39c12; color:white; border:none; border-radius:3px; padding:3px 8px;">REVISI</button></td></tr>`;
+        });
+
+        document.getElementById('report_info').innerHTML = `<b>${jenis}</b> | ${kode} | ${faktur}`;
+        document.getElementById('report_body').innerHTML = html || "<tr><td colspan='4'>Belum ada data</td></tr>";
+        document.getElementById('modal_report').style.display = 'block';
+        const btnFin = document.getElementById('btn_finalisasi');
+        btnFin.disabled = !(Object.keys(reportMap).length > 0 && isAllMatch);
+        btnFin.style.opacity = btnFin.disabled ? "0.3" : "1";
     }
 
-    function updateBadge() { document.getElementById('badge').innerText = JSON.parse(localStorage.getItem('q_polcek') || "[]").length; }
+    async function prosesFinalisasi() {
+
+    // 1. Tutup modal report
+    document.getElementById('modal_report').style.display = 'none';
+
+    // 2. Konfirmasi finalisasi
+    const { isConfirmed } = await Swal.fire({
+        title: 'FINALISASI DATA?',
+        text: 'Pastikan semua data SUDAH MATCH',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'YA, FINAL',
+        cancelButtonText: 'BATAL'
+    });
+
+    if (!isConfirmed) {
+        // kalau batal, buka lagi modal
+        document.getElementById('modal_report').style.display = 'block';
+        return;
+    }
+
+    const jenisAktif  = document.getElementById('p_jenis').value;
+    const fakturAktif = document.getElementById('p_faktur').value;
+    const kodeAktif   = document.getElementById('p_kode').value;
+
+    document.getElementById('loader').style.display = 'flex';
+
+    let allLocalData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+    const dataToSend = allLocalData.filter(i =>
+        i.jenis === jenisAktif &&
+        i.faktur === fakturAktif &&
+        i.kode === kodeAktif
+    );
+
+    try {
+        const res = await fetch(G_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "syncBatch", data: dataToSend })
+        });
+        const out = await res.json();
+
+        if (out.status === "success") {
+
+            // Hapus data yang sudah final
+            const sisa = allLocalData.filter(i =>
+                !(i.jenis === jenisAktif &&
+                  i.faktur === fakturAktif &&
+                  i.kode === kodeAktif)
+            );
+            localStorage.setItem('q_polcek', JSON.stringify(sisa));
+
+            // Update cache monitoring
+            autoSyncLocal(dataToSend);
+
+            updateBadge();
+            clearAllFields();
+
+            
+        } else {
+            Swal.fire("GAGAL", "Server menolak data", "error");
+        }
+
+    } catch (e) {
+        Swal.fire("ERROR", "Gagal koneksi server", "error");
+    }
+
+        document.getElementById('loader').style.display = 'none';
+
+    // ✅ RESET TOTAL
+    resetScanField();
+
+    // ✅ FOKUS TUJUAN
+    focusToJenis();
+
+    Swal.fire("BERHASIL", "Finalisasi Sukses", "success");
+}
+
+
+async function revisiQty(key, barcode) {
+
+    // 1. Tutup modal report
+    document.getElementById('modal_report').style.display = 'none';
+
+    // 2. OTP (password mode)
+    const { value: otp } = await Swal.fire({
+        title: 'OTP REVISI',
+        input: 'password',
+        inputPlaceholder: 'Masukkan OTP',
+        inputAttributes: { autocomplete: 'off' },
+        showCancelButton: true,
+        confirmButtonText: 'VALIDASI',
+        cancelButtonText: 'BATAL'
+    });
+
+    if (!otp) {
+        document.getElementById('modal_report').style.display = 'block';
+        return;
+    }
+
+    if (otp !== "234") {
+        Swal.fire("GAGAL", "OTP Salah", "error");
+        document.getElementById('modal_report').style.display = 'block';
+        return;
+    }
+
+    // 3. Input Qty Baru
+    const { value: newQty } = await Swal.fire({
+        title: 'QTY BARU',
+        input: 'number',
+        inputAttributes: { min: 0 },
+        showCancelButton: true
+    });
+
+    if (newQty === null || newQty === "") {
+        document.getElementById('modal_report').style.display = 'block';
+        return;
+    }
+
+    let allData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+    const idx = allData.findIndex(i =>
+        i.jenis === document.getElementById('p_jenis').value &&
+        i.faktur === document.getElementById('p_faktur').value &&
+        i.kode === document.getElementById('p_kode').value &&
+        (i.barcode === barcode || i.plu === barcode || i.barcode.includes(barcode))
+    );
+
+    if (idx !== -1) {
+        allData[idx].qty_scan = parseInt(newQty);
+        localStorage.setItem('q_polcek', JSON.stringify(allData));
+        Swal.fire("OK", "Qty diperbarui", "success");
+    }
+
+    // 4. KEMBALI KE MODAL FINAL
+    showReport();
+}
+function releaseFocus() {
+    if (document.activeElement) {
+        document.activeElement.blur();
+    }
+}
+function focusToJenis() {
+    setTimeout(() => {
+        const el = document.getElementById('p_jenis');
+        if (el) el.focus();
+    }, 150);
+}
+
+function initMonitoring() {
+    loadMonitoringCache();
+    syncMonitoringFromServer(); // background sync pertama
+    setInterval(syncMonitoringFromServer, 15000); // auto sync tanpa loader
+}
+
+function loadMonitoringCache() {
+    MONITOR_CACHE = JSON.parse(
+        localStorage.getItem('monitoring_polcek') || '[]'
+    );
+
+    // ⬇️ inject ke cache lama agar showMonitoring tetap jalan
+    if (CACHED_DATA && Array.isArray(CACHED_DATA.dataSudahPolcek)) {
+        CACHED_DATA.dataSudahPolcek = [...MONITOR_CACHE];
+    }
+}
+
+function saveMonitoringCache() {
+    localStorage.setItem(
+        'monitoring_polcek',
+        JSON.stringify(MONITOR_CACHE)
+    );
+}
+
+async function syncMonitoringFromServer() {
+    try {
+        const res = await fetch(G_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "getMonitoringUpdate" })
+        });
+
+        const out = await res.json();
+        if (!out || out.status !== "success") return;
+
+        const serverData = out.dataSudahPolcek || [];
+
+        // 🔁 bandingkan SERVER vs LOCAL
+        let changed = false;
+
+        // ADD / UPDATE
+        serverData.forEach(srv => {
+            const idx = MONITOR_CACHE.findIndex(l =>
+                l.tgl === srv.tgl &&
+                l.kode === srv.kode &&
+                l.urpick === srv.urpick &&
+                l.jenis === srv.jenis
+            );
+
+            if (idx === -1) {
+                MONITOR_CACHE.push(srv);
+                changed = true;
+            } else if (
+                MONITOR_CACHE[idx].qty_scan !== srv.qty_scan
+            ) {
+                MONITOR_CACHE[idx] = srv;
+                changed = true;
+            }
+        });
+
+        // REMOVE (jika server hapus)
+        const filtered = MONITOR_CACHE.filter(l =>
+            serverData.some(s =>
+                s.tgl === l.tgl &&
+                s.kode === l.kode &&
+                s.urpick === l.urpick &&
+                s.jenis === l.jenis
+            )
+        );
+
+        if (filtered.length !== MONITOR_CACHE.length) {
+            MONITOR_CACHE = filtered;
+            changed = true;
+        }
+
+        if (changed) {
+            saveMonitoringCache();
+
+            // inject ulang agar showMonitoring pakai data terbaru
+            if (CACHED_DATA) {
+                CACHED_DATA.dataSudahPolcek = [...MONITOR_CACHE];
+            }
+
+            if (document.getElementById('modal_report').style.display === 'block') {
+                showMonitoring();
+            }
+        }
+
+    } catch (e) {
+        console.warn("Monitoring sync gagal (silent)");
+    }
+}
+
+
 </script>
 </body>
 </html>
