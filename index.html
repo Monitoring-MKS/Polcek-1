@@ -59,11 +59,66 @@
         .footer { display: flex; gap: 8px; margin-top: 15px; }
         .btn-main { flex: 1; padding: 15px; border: none; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; font-size: 12px; }
         #loader { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; color: white; }
-    </style>
+
+/*CSS khusus tabel monitoring*/
+    .table-monitor { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
+    .table-monitor th { background: #2c3e50; color: white; padding: 8px; border: 1px solid #ddd; }
+    .table-monitor td { padding: 8px; border: 1px solid #ddd; text-align: center; font-weight: bold; }
+    .table-monitor tr:nth-child(even) { background-color: #f2f2f2; }
+    .status-match { color: #27ae60; }
+    .status-pending { color: #e67e22; }
+
+
+.circle-loader {
+  width: 48px;
+  height: 48px;
+  border: 5px solid rgba(255,255,255,0.3);
+  border-top: 5px solid #ffffff;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+</style>
+
 </head>
 <body onload="initApp()">
 
-<div id="loader"><p>SINKRONISASI DATA...</p></div>
+<div id="modal_monitor" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:20000; overflow-y:auto; padding:10px;">
+    <div style="background:white; border-radius:10px; padding:15px; min-height:100%; position: relative;">
+        <button class="btn-close-modal" onclick="document.getElementById('modal_monitor').style.display='none'">×</button>
+        
+        <h3 style="text-align:center; margin-top:0; color: #2c3e50;">MONITORING POLCEK</h3>
+<button onclick="refreshMonitoringData()" style="background: #27ae60; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer;">
+                🔄 Sync Data
+            </button>
+        <p id="monitor_date" style="text-align:center; font-size:12px; font-weight:bold;"></p>
+        
+        <hr>
+
+        <div id="monitor_content" style="overflow-x:auto;">
+             </div>
+
+        <div style="margin-top:20px;">
+            <button class="btn-main" style="background:#34495e; width: 100%;" onclick="document.getElementById('modal_monitor').style.display='none'">TUTUP MONITORING</button>
+        </div>
+    </div>
+</div>
+
+<div id="loader"
+     style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+            background:rgba(0,0,0,0.75); z-index:9999;
+            display:flex; flex-direction:column; justify-content:center; align-items:center;">
+
+  <div class="circle-loader"></div>
+
+  <p style="margin-top:15px; font-size:14px; font-weight:bold; color:#ffffff;">
+    Sedang mengambil data master, mohon tunggu...
+  </p>
+</div>
 
 <div id="login_screen">
     <div class="login-box">
@@ -80,7 +135,7 @@
 
 <div id="main_app" style="display:none;">
     <div class="header">POLCEK - WH MAKASSAR <br><span style="font-size: 9px; color: yellow;">V.01.02.26@ mks-bersatu</span></div>
-    <div class="user-bar"><span>Petugas: <b id="display_user">---</b></span><button class="btn-logout" onclick="doLogout()">LOGOUT</button></div>
+    <div class="user-bar"><span>User: <b id="display_user">---</b></span><button class="btn-logout" onclick="doLogout()">LOGOUT</button></div>
 
     <div class="input-row"><div class="label">TGL PROSES</div><input type="date" id="p_tgl" onchange="setFocus('p_jenis')"></div>
     <div class="input-row">
@@ -146,31 +201,57 @@
 </div>
 
 <script>
-const G_URL = "https://script.google.com/macros/s/AKfycbx3WQX1-tOhOtShQMmJKovfoq_uFmtx-8ZrL0d7Uyw4XxyA_St-_pAMK0IuDyl-t7k/exec";
-    let dbPickAuto = [], dbMasterBarcode = [], dbManual = [];
-    let currentUser = "";
-    let CACHED_DATA = null;
+const G_URL = "https://script.google.com/macros/s/AKfycbyBLdbv9U3824IftW11YnZG6Cu67gMdeIVvk_yGEsbkZ3Upwwe0H8A8DYwRDYp_Xgk/exec";
+    var dbPickAuto = [], dbMasterBarcode = [], dbManual = [], dbSudahPolcek = [];
+var currentUser = "";
+var CACHED_DATA = null;
 
     const usersDB = [{ nik: "10030732", nama: "URIP PRADIPTA", pass: "234" }];
 
     async function initApp() {
-        document.getElementById('loader').style.display = 'flex';
-        document.getElementById('p_tgl').valueAsDate = new Date();
-        try {
-            // Gunakan loadInitialData agar CACHED_DATA terisi sejak awal
-            const out = await loadInitialData(true);
-            if (out && out.status === "success") {
-                dbPickAuto = out.pickAuto || [];
-                dbMasterBarcode = out.masterBarcode || [];
-                dbManual = out.dataManual || [];
-                console.log("Database Ready");
-            }
-        } catch (e) { 
-            console.error("Initialization Error:", e); 
+    const loader = document.getElementById('loader');
+    if (loader) loader.style.display = 'flex';
+
+    try {
+        const res = await fetch(G_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ action: "getAllData" }),
+            // Tambahkan mode cors jika perlu
+            mode: 'cors'
+        });
+        
+        if (!res.ok) throw new Error("Server bermasalah");
+        
+        const out = await res.json();
+        
+        if (out && out.status === "success") {
+            // Update variabel global
+            dbPickAuto = out.pickAuto || [];
+            dbMasterBarcode = out.masterBarcode || [];
+            dbManual = out.dataManual || [];
+            dbSudahPolcek = out.dataSudahPolcek || []; 
+
+            // Simpan ke memory fisik HP
+            localStorage.setItem("db_pick_auto", JSON.stringify(dbPickAuto));
+            localStorage.setItem("db_master_barcode", JSON.stringify(dbMasterBarcode));
+            localStorage.setItem("db_manual", JSON.stringify(dbManual));
+            localStorage.setItem("db_sudah_polcek", JSON.stringify(dbSudahPolcek));
+
+            console.log("Data Berhasil Dimuat. Jumlah Data Scan:", dbSudahPolcek.length);
         }
-        document.getElementById('loader').style.display = 'none';
+    } catch (e) {
+        console.error("Koneksi Error:", e);
+        // Jika koneksi reset, ambil data terakhir dari memory HP agar monitoring tidak kosong
+        dbSudahPolcek = JSON.parse(localStorage.getItem("db_sudah_polcek") || "[]");
+        dbPickAuto = JSON.parse(localStorage.getItem("db_pick_auto") || "[]");
+        
+        Swal.fire("Koneksi Lemah", "Gagal mengambil data terbaru dari server. Menampilkan data lokal terakhir.", "warning");
+    } finally {
+        if (loader) loader.style.display = 'none';
+        document.getElementById('p_tgl').valueAsDate = new Date();
         updateBadge();
     }
+}
 
     async function loadInitialData(force = false) {
         if (CACHED_DATA && !force) return CACHED_DATA;
@@ -210,73 +291,121 @@ const G_URL = "https://script.google.com/macros/s/AKfycbx3WQX1-tOhOtShQMmJKovfoq
     }
 
     function doLogin() {
-        const nik = document.getElementById('l_nik').value;
-        const pass = document.getElementById('l_pass').value;
-        const user = usersDB.find(u => u.nik === nik && u.pass === pass);
-        if (user) {
-            currentUser = user.nama; 
-            document.getElementById('display_user').innerText = currentUser;
-            document.getElementById('login_screen').style.display = 'none';
-            document.getElementById('main_app').style.display = 'block';
-            initApp(); // Load data setelah login
-            notify("Ewako!!! Selamat Bekerja, " + currentUser);
-        } else { 
-            Swal.fire("Gagal", "Password Salah!", "error"); 
-        }
+    const nik = document.getElementById('l_nik').value;
+    const pass = document.getElementById('l_pass').value;
+    const user = usersDB.find(u => u.nik === nik && u.pass === pass);
+    
+    if (user) {
+        currentUser = user.nama; 
+        document.getElementById('display_user').innerText = currentUser;
+        document.getElementById('login_screen').style.display = 'none';
+        document.getElementById('main_app').style.display = 'block';
+        
+        // Jalankan initApp untuk menarik data terbaru dari server
+        initApp(); 
+    } else { 
+        Swal.fire("Gagal", "NIK atau Password Salah!", "error"); 
     }
+}
 
     function doLogout() {
-        Swal.fire({
-            title: 'Logout?', text: "Pastikan data antrian sudah di-finalisasi.", icon: 'warning',
-            showCancelButton: true, confirmButtonColor: '#c0392b', confirmButtonText: 'Ya, Logout'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                currentUser = "";
-                document.getElementById('login_screen').style.display = 'flex';
-                document.getElementById('main_app').style.display = 'none';
-            }
-        });
-    }
+    Swal.fire({
+        title: 'Logout?',
+        text: "Data Master akan dihapus dari HP ini.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Logout'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Hapus data sesuai aturan Tahap 3
+            localStorage.removeItem("db_pick_auto");
+            localStorage.removeItem("db_master_barcode");
+            localStorage.removeItem("db_manual");
+            localStorage.removeItem("db_sudah_polcek");
+            
+            currentUser = "";
+            document.getElementById('login_screen').style.display = 'flex';
+            document.getElementById('main_app').style.display = 'none';
+        }
+    });
+}
 
     // ==========================================
     // TRANSACTION LOGIC (SCAN & FILTER)
     // ==========================================
     function handleJenisChange() {
-        const jenis = document.getElementById('p_jenis').value;
-        const butuhScan = ["KONTAINER", "DOS", "MANUAL", "TAG I"];
-        const rowScan = document.getElementById('row_scan_label');
-        if(rowScan) rowScan.style.display = butuhScan.includes(jenis) ? 'flex' : 'none';
-        if (document.getElementById('p_kode').value) runFilter();
+    const jenis = document.getElementById('p_jenis').value;
+    
+    // 1. Definisikan area scan yang butuh label/fisik
+    const butuhScan = ["KONTAINER", "DOS", "MANUAL", "TAG I"];
+    const rowScan = document.getElementById('row_scan_label');
+    if(rowScan) rowScan.style.display = butuhScan.includes(jenis) ? 'flex' : 'none';
+
+    // 2. KOSONGKAN SEMUA KOLOM (Point 8: Semua kontainer dikosongkan)
+    // Kecuali Tanggal dan Jenis itu sendiri
+    const idsToClear = ['p_kode', 'p_nama', 'p_urpick', 'p_scan_label', 'p_scan_fisik', 'p_plu', 'p_descp', 'p_zona', 'p_qty_input', 'p_qty_data'];
+    idsToClear.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+    });
+
+    // Reset dropdown faktur ke default
+    document.getElementById('p_faktur').innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
+
+    // Reset area fisik dan qty read-only
+    document.getElementById('area_fisik').style.display = 'none';
+    const qtyInp = document.getElementById('p_qty_input');
+    qtyInp.readOnly = true;
+    qtyInp.style.background = "#dcdcdc";
+
+    // 3. FOKUS KURSOR KEMBALI KE KODE TOKO (Point 8)
+    if (jenis !== "") {
+        console.log("Jenis berubah ke " + jenis + ", kursor ke Kode Toko");
         setFocus('p_kode');
     }
+}
 
     function runFilter() {
-        const tglRaw = document.getElementById('p_tgl').value;
-        const jenis = document.getElementById('p_jenis').value;
-        const kode = document.getElementById('p_kode').value.trim().toUpperCase();
-        const fSelect = document.getElementById('p_faktur');
-        if (!tglRaw || !kode || !jenis) return;
+    const tglRaw = document.getElementById('p_tgl').value;
+    const jenis = document.getElementById('p_jenis').value;
+    const kode = document.getElementById('p_kode').value.trim().toUpperCase();
+    const fSelect = document.getElementById('p_faktur');
+    
+    if (!tglRaw || !kode || !jenis) return false;
 
-        const d = new Date(tglRaw);
-        const tglCheck = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
-        const currentDB = (jenis === "MANUAL") ? dbManual : dbPickAuto;
+    // Format tanggal untuk pencarian
+    const d = new Date(tglRaw);
+    const tglCheck = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+    
+    // Pilih database berdasarkan jenis
+    const currentDB = (jenis === "MANUAL") ? dbManual : dbPickAuto;
 
-        const filtered = currentDB.filter(item => {
-            const matchTglStore = (item.tglInput === tglCheck && item.kodeToko === kode);
-            if (!matchTglStore) return false;
-            if (jenis === "MANUAL" || ["TAG I", "NON LOKASI", "TELUR", "MKT", "ATK GS", "MATERAI"].includes(jenis)) return true;
-            const kVal = (item.kontainer || "").toUpperCase();
-            const isDos = kVal.includes("DOS");
-            return jenis === "KONTAINER" ? !isDos : isDos;
-        });
+    // Cari data yang cocok
+    const filtered = currentDB.filter(item => {
+        return item.tglInput === tglCheck && item.kodeToko === kode;
+    });
 
+    if (filtered.length > 0) {
+        // Isi Nama Toko dan Urpick secara otomatis
+        document.getElementById('p_nama').value = filtered[0].namaToko;
+        document.getElementById('p_urpick').value = filtered[0].urpick;
+
+        // Isi Dropdown Faktur
         fSelect.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
-        if (filtered.length > 0) {
-            document.getElementById('p_nama').value = filtered[0].namaToko;
-            document.getElementById('p_urpick').value = filtered[0].urpick;
-            [...new Set(filtered.map(i => i.faktur))].forEach(f => { fSelect.innerHTML += `<option value="${f}">${f}</option>`; });
-        }
+        const uniqueFakturs = [...new Set(filtered.map(i => i.faktur))];
+        uniqueFakturs.forEach(f => { 
+            fSelect.innerHTML += `<option value="${f}">${f}</option>`; 
+        });
+        
+        return true; // Data ditemukan
+    } else {
+        // Reset jika tidak ketemu
+        document.getElementById('p_nama').value = "";
+        document.getElementById('p_urpick').value = "";
+        fSelect.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
+        return false; // Data tidak ditemukan
     }
+}
 
     function validateScanLabel() {
         const scanVal = document.getElementById('p_scan_label').value.trim();
@@ -319,14 +448,39 @@ const G_URL = "https://script.google.com/macros/s/AKfycbx3WQX1-tOhOtShQMmJKovfoq
     }
 
     function validateScanFisik() {
-        const scanFisik = document.getElementById('p_scan_fisik').value.trim();
-        const pluTarget = String(document.getElementById('p_plu').value).trim();
-        const qtyInp = document.getElementById('p_qty_input');
-        if (!pluTarget || pluTarget === "-") return notify("⚠️ SCAN LABEL DULU!", "error", "p_scan_label");
-        const match = dbMasterBarcode.find(m => (scanFisik === String(m.barcodeDos).trim() || scanFisik === String(m.barcodeItem).trim()) && String(m.plu).trim() === pluTarget);
-        if (match) { qtyInp.readOnly = false; qtyInp.style.background = "white"; setFocus('p_qty_input'); }
-        else { notify("⚠️ FISIK SALAH!", "error", "p_scan_fisik"); document.getElementById('p_scan_fisik').value = ""; }
+    const scanFisik = document.getElementById('p_scan_fisik').value.trim();
+    const pluTarget = String(document.getElementById('p_plu').value).trim();
+    const qtyInp = document.getElementById('p_qty_input');
+    const jenisVal = document.getElementById('p_jenis').value;
+
+    if (!scanFisik) return;
+    if (!pluTarget || pluTarget === "-") {
+        return notify("⚠️ SCAN LABEL DULU!", "error", "p_scan_label");
     }
+
+    // Cari kecocokan di master barcode
+    const match = dbMasterBarcode.find(m => 
+        (scanFisik === String(m.barcodeDos).trim() || scanFisik === String(m.barcodeItem).trim()) 
+        && String(m.plu).trim() === pluTarget
+    );
+
+    if (match) {
+        // Tahap 5: Qty otomatis terisi 1 atau bertambah 1
+        let currentQty = parseInt(qtyInp.value) || 0;
+        qtyInp.value = currentQty + 1; 
+        
+        // Kolom Qty tetap terbuka
+        qtyInp.readOnly = false;
+        qtyInp.style.background = "white";
+
+        // Notifikasi suara/visual singkat dan kursor TETAP di scan fisik
+        document.getElementById('p_scan_fisik').value = ""; // Kosongkan untuk scan berikutnya
+        setFocus('p_scan_fisik'); 
+    } else {
+        notify("⚠️ FISIK SALAH / PLU TIDAK SESUAI!", "error", "p_scan_fisik");
+        document.getElementById('p_scan_fisik').value = "";
+    }
+}
 
     function fillData(m) {
         const jenis = document.getElementById('p_jenis').value;
@@ -342,66 +496,174 @@ const G_URL = "https://script.google.com/macros/s/AKfycbx3WQX1-tOhOtShQMmJKovfoq
         document.getElementById('p_qty_data').value = totalTargetToko;
     }
 
-    function saveData() {
-        const qtyInp = document.getElementById('p_qty_input');
-        const jenis = document.getElementById('p_jenis').value;
-        const kodeToko = document.getElementById('p_kode').value.toUpperCase();
-        const fakturVal = document.getElementById('p_faktur').value;
-        const pluVal = document.getElementById('p_plu').value;
-        if (!qtyInp.value || qtyInp.value <= 0) return notify("Isi Qty!", "error", "p_qty_input");
+async function saveData() {
+    const qtyInp = document.getElementById('p_qty_input');
+    const jenis = document.getElementById('p_jenis').value;
+    const kodeToko = document.getElementById('p_kode').value.toUpperCase();
+    const fakturVal = document.getElementById('p_faktur').value;
+    
+    if (!qtyInp.value || qtyInp.value <= 0) return notify("Isi Qty!", "error", "p_qty_input");
+
+    const kelompokNonScan = ["TELUR", "MKT", "ATK GS", "MATERAI"];
+
+    // Jika masuk kelompok NON-SCAN, langsung kirim ke server (Point 9)
+    if (kelompokNonScan.includes(jenis)) {
+        const dataLangsung = [{
+            tgl: document.getElementById('p_tgl').value,
+            jenis: jenis,
+            kode: kodeToko,
+            nama: document.getElementById('p_nama').value,
+            urpick: document.getElementById('p_urpick').value,
+            faktur: fakturVal,
+            zona: document.getElementById('p_zona').value || "-",
+            barcode: "NON-SCAN",
+            plu: document.getElementById('p_plu').value || "MANUAL",
+            descp: document.getElementById('p_descp').value || "-",
+            qty_data: 0,
+            qty_scan: parseInt(qtyInp.value),
+            petugas: currentUser
+        }];
+
+        await kirimDataLangsung(dataLangsung);
+    } else {
+        // Alur Biasa (DOS, MANUAL, KONTAINER) simpan ke LocalStorage dulu
         let q = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-        const idx = q.findIndex(i => i.plu === pluVal && i.faktur === fakturVal && i.kode === kodeToko && i.jenis === jenis);
-        if (idx !== -1 && jenis !== "KONTAINER") q[idx].qty_scan = parseInt(q[idx].qty_scan) + parseInt(qtyInp.value);
-        else {
-            q.push({
-                tgl: document.getElementById('p_tgl').value, jenis: jenis, kode: kodeToko,
-                nama: document.getElementById('p_nama').value, urpick: document.getElementById('p_urpick').value,
-                faktur: fakturVal, zona: document.getElementById('p_zona').value, barcode: document.getElementById('p_scan_label').value,
-                plu: pluVal, descp: document.getElementById('p_descp').value, qty_data: parseInt(document.getElementById('p_qty_data').value),
-                qty_scan: parseInt(qtyInp.value), petugas: currentUser
-            });
-        }
+        q.push({
+            tgl: document.getElementById('p_tgl').value,
+            jenis: jenis,
+            kode: kodeToko,
+            nama: document.getElementById('p_nama').value,
+            urpick: document.getElementById('p_urpick').value,
+            faktur: fakturVal,
+            zona: document.getElementById('p_zona').value,
+            barcode: document.getElementById('p_scan_label').value,
+            plu: document.getElementById('p_plu').value,
+            descp: document.getElementById('p_descp').value,
+            qty_data: parseInt(document.getElementById('p_qty_data').value || 0),
+            qty_scan: parseInt(qtyInp.value),
+            petugas: currentUser
+        });
         localStorage.setItem('q_polcek', JSON.stringify(q));
-        updateBadge(); resetScanField(); focusToNext();
+        updateBadge();
+        afterSaveFocus(jenis);
     }
+}
+
+// Fungsi pembantu untuk kirim data kelompok Non-Scan
+async function kirimDataLangsung(data) {
+    const loader = document.getElementById('loader');
+    loader.style.display = 'flex'; // Loader jalan
+    
+    try {
+        const res = await fetch(G_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ action: "syncBatch", data: data }) 
+        });
+        const out = await res.json();
+        
+        // POINT 10: TUTUP LOADER DULU SEBELUM POP-UP BERHASIL
+        loader.style.display = 'none'; 
+        
+        if (out.status === "success") {
+            await Swal.fire("Berhasil", "Data Non-Scan Terkirim!", "success");
+            clearAllFieldsInternal(); // Reset semua kolom (Point 9)
+        }
+    } catch (e) {
+        loader.style.display = 'none';
+        Swal.fire("Gagal", "Cek Koneksi Server", "error");
+    }
+}
+
+function afterSaveFocus(jenis) {
+    const kelompokNonScan = ["TELUR", "MKT", "ATK GS", "MATERAI"];
+
+    // 1. Reset field input (Point 9)
+    ['p_scan_label','p_scan_fisik','p_plu','p_descp','p_zona','p_qty_input','p_qty_data'].forEach(id => {
+        if(document.getElementById(id)) document.getElementById(id).value = "";
+    });
+
+    if (kelompokNonScan.includes(jenis)) {
+        // KHUSUS BARANG INI: Reset Dropdown Jenis ke default & Fokus ke Jenis
+        document.getElementById('p_jenis').value = ""; 
+        setFocus('p_jenis');
+    } else {
+        // DOS, MANUAL, KONTAINER, TAG I -> Tetap di Jenis yang sama, tapi Fokus ke Scan Label
+        setFocus('p_scan_label');
+    }
+    
+    document.getElementById('area_fisik').style.display = 'none';
+    const qtyInp = document.getElementById('p_qty_input');
+    qtyInp.readOnly = true; 
+    qtyInp.style.background = "#dcdcdc";
+}
 
     async function prosesFinalisasi() {
-        const jenisAktif = document.getElementById('p_jenis').value;
-        const fakturAktif = document.getElementById('p_faktur').value;
-        const kodeAktif = document.getElementById('p_kode').value;
-        
-        const { isConfirmed } = await Swal.fire({ title: 'Kirim Data?', icon: 'question', showCancelButton: true });
-        if (!isConfirmed) return;
-        
-        document.getElementById('loader').style.display = 'flex';
-        let allLocalData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-        const dataToSend = allLocalData.filter(i => i.jenis === jenisAktif && i.faktur === fakturAktif && i.kode === kodeAktif);
+    const jenisAktif = document.getElementById('p_jenis').value;
+    const fakturAktif = document.getElementById('p_faktur').value;
+    const kodeAktif = document.getElementById('p_kode').value;
+
+    document.getElementById('modal_report').style.display = 'none';
+
+    const { isConfirmed } = await Swal.fire({ 
+        title: 'Kirim Data?', 
+        icon: 'question', 
+        showCancelButton: true 
+    });
+
+    if (isConfirmed) {
+        const loader = document.getElementById('loader');
+        loader.style.display = 'flex'; 
 
         try {
-            const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "syncBatch", data: dataToSend }) });
-            const out = await res.json();
-            
-            if (out.status === "success") {
-                // 1. Bersihkan LocalStorage
-                const sisaData = allLocalData.filter(i => !(i.jenis === jenisAktif && i.faktur === fakturAktif && i.kode === kodeAktif));
-                localStorage.setItem('q_polcek', JSON.stringify(sisaData));
+            let allLocalData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+            const dataToSend = allLocalData.filter(i => i.jenis === jenisAktif && i.faktur === fakturAktif && i.kode === kodeAktif);
 
-                // 2. AUTO-SYNC ke Cache Monitoring
-                if (CACHED_DATA) {
-                    if(!CACHED_DATA.dataSudahPolcek) CACHED_DATA.dataSudahPolcek = [];
-                    dataToSend.forEach(d => CACHED_DATA.dataSudahPolcek.push(d));
-                }
+     const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "syncBatch", data: dataToSend }) });
+const out = await res.json();
+    
+    // POINT 10: PASTIKAN LOADER HILANG DI SINI
+    loader.style.display = 'none'; 
 
-                updateBadge();
-                closeMonitoring();
-                Swal.fire("Berhasil", "Data masuk database!", "success");
-                clearAllFields();
-            }
-        } catch (e) { 
-            Swal.fire("Gagal", "Cek Koneksi Server", "error"); 
-        }
-        document.getElementById('loader').style.display = 'none';
+    if (out.status === "success") {
+        const sisaData = allLocalData.filter(i => !(i.jenis === jenisAktif && i.faktur === fakturAktif && i.kode === kodeAktif));
+        localStorage.setItem('q_polcek', JSON.stringify(sisaData));
+        updateBadge();
+
+        // --- TAMBAHKAN DI SINI (SEBELUM SWAL) ---
+        // Update cache lokal supaya Monitoring Real-time (Point 2)
+        dataToSend.forEach(d => dbSudahPolcek.push(d)); 
+        localStorage.setItem("db_sudah_polcek", JSON.stringify(dbSudahPolcek));
+        // ----------------------------------------
+
+        await Swal.fire("Berhasil", "Data Terkirim!", "success");
+        clearAllFieldsInternal(); // Reset total
     }
+
+        } catch (e) { 
+            loader.style.display = 'none';
+            Swal.fire("Gagal", "Koneksi Terputus", "error"); 
+            document.getElementById('modal_report').style.display = 'block';
+        }
+    } else {
+        document.getElementById('modal_report').style.display = 'block';
+    }
+}
+
+function clearAllFieldsInternal() {
+    // Kosongkan Jenis (kembali ke --PILIH JENIS--)
+    document.getElementById('p_jenis').value = "";
+    // Kosongkan semua field input
+    const ids = ['p_kode','p_nama','p_urpick','p_faktur','p_scan_label','p_scan_fisik','p_plu','p_descp','p_zona','p_qty_input','p_qty_data'];
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) {
+            if(el.tagName === "SELECT") el.innerHTML = '<option value="">-- PILIH --</option>';
+            else el.value = "";
+        }
+    });
+    // Fokus ke Jenis sesuai permintaan point 9
+    setFocus('p_jenis');
+}
 
     // ==========================================
     // UI HELPER & MONITORING
@@ -443,111 +705,172 @@ const G_URL = "https://script.google.com/macros/s/AKfycbx3WQX1-tOhOtShQMmJKovfoq
     }
 
     function clearAllFields() {
-        if(confirm("Hapus Semua?")) {
-            resetScanField();
-            ['p_kode','p_nama','p_urpick'].forEach(id => document.getElementById(id).value = "");
-            document.getElementById('p_faktur').innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
-            setFocus('p_tgl');
+    // 1. Reset Dropdown Jenis ke label default
+    const pJenis = document.getElementById('p_jenis');
+    if (pJenis) pJenis.value = ""; // Kembali ke ---PILIH JENIS---
+
+    // 2. Kosongkan Dropdown Faktur
+    const pFaktur = document.getElementById('p_faktur');
+    if (pFaktur) pFaktur.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
+
+    // 3. Daftar ID kolom yang harus dikosongkan total
+    const idsToClear = [
+        'p_kode', 'p_nama', 'p_urpick', 
+        'p_scan_label', 'p_scan_fisik', 'p_plu', 
+        'p_descp', 'p_zona', 'p_qty_input', 'p_qty_data'
+    ];
+
+    idsToClear.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+    });
+
+    // 4. Reset tampilan khusus (Area Fisik & Qty Style)
+    const areaFisik = document.getElementById('area_fisik');
+    if (areaFisik) areaFisik.style.display = 'none';
+
+    const qtyInp = document.getElementById('p_qty_input');
+    if (qtyInp) {
+        qtyInp.readOnly = true;
+        qtyInp.style.background = "#dcdcdc"; // Kembali ke warna abu-abu (disable)
+    }
+
+    // 5. Fokus Kursos kembali ke posisi awal (Point 12)
+    console.log("Aplikasi direset, siap input baru.");
+    setFocus('p_tgl'); 
+    
+    // Opsional: Notifikasi singkat bahwa data telah dibersihkan
+    // notify("Layar dibersihkan", "success", "p_tgl");
+}
+
+function showMonitoring() {
+    const tglRaw = document.getElementById('p_tgl').value;
+    if (!tglRaw) {
+        Swal.fire("Pilih Tanggal", "Tentukan tanggal proses", "warning");
+        return;
+    }
+
+    const clean = v => String(v || "").trim().toUpperCase();
+    const tglTarget = tglRaw.substring(0, 10);
+
+    let monitorMap = {};
+
+    /* ============================================================
+       1️⃣ TARGET → DARI MASTER (PICK AUTO + MANUAL)
+       ============================================================ */
+
+    const masterData = [
+        ...dbPickAuto.map(d => ({ ...d, src: 'PA' })),
+        ...dbManual.map(d => ({ ...d, src: 'MN' }))
+    ];
+
+    masterData.forEach(item => {
+        if (clean(item.tglInput) !== tglTarget) return;
+
+        const kode = clean(item.kodeToko);
+        if (!kode) return;
+
+        // 🔧 INISIALISASI TARGET
+        if (!monitorMap[kode]) {
+            monitorMap[kode] = {
+                urpick: item.urpick || "",
+                kode: kode,
+                tKN: 0, tDS: 0, tMN: 0,
+                sKN: 0, sDS: 0, sMN: 0
+            };
         }
+
+        // HITUNG TARGET
+        if (item.src === 'MN') {
+            monitorMap[kode].tMN += parseInt(item.qtyData || 0);
+        } else {
+            const kont = clean(item.kontainer);
+            if (kont.startsWith("DOS")) {
+                monitorMap[kode].tDS += parseInt(item.qtyData || 0);
+            } else if (kont !== "") {
+                monitorMap[kode].tKN += 1;
+            }
+        }
+    });
+
+    /* ============================================================
+       2️⃣ REALISASI → DARI DATA POLCEK (SCAN)
+       ❗ INI BAGIAN KRITIS YANG DIPERBAIKI
+       ============================================================ */
+
+    if (!Array.isArray(dbSudahPolcek) || dbSudahPolcek.length === 0) {
+        Swal.fire("Monitoring Kosong", "Data scan belum tersedia", "warning");
+        return;
     }
 
-    async function showMonitoring() {
-        const tglRaw = document.getElementById('p_tgl').value;
-        if (!tglRaw) return Swal.fire("Pilih Tanggal", "Set tanggal terlebih dahulu", "warning");
+    dbSudahPolcek.forEach(s => {
+        const tglScan = clean(s.tgl).substring(0, 10);
+        if (tglScan !== tglTarget) return;
 
-        const out = await loadInitialData();
-        if (!out || out.status !== "success") return Swal.fire("Error", "Data tidak tersedia", "error");
+        const kode = clean(s.kode);
+        const jenis = clean(s.jenis);
+        const qty  = parseInt(s.qty_scan || 0);
 
-        const tglCheck = tglRaw;
-        const dataSudahPolcek = out.dataSudahPolcek || [];
-        let monitorMap = {};
+        if (!kode || qty <= 0) return;
 
-        const allTarget = [...(out.pickAuto || []), ...(out.dataManual || [])].filter(i => i.tglInput === tglCheck);
+        // 🔥 PERBAIKAN UTAMA
+        // Scan TIDAK BOLEH bergantung ke TARGET
+        if (!monitorMap[kode]) {
+            monitorMap[kode] = {
+                urpick: "",
+                kode: kode,
+                tKN: 0, tDS: 0, tMN: 0,
+                sKN: 0, sDS: 0, sMN: 0
+            };
+        }
+
+        // HITUNG REALISASI
+        if (jenis === "KONTAINER") monitorMap[kode].sKN += qty;
+        else if (jenis === "DOS") monitorMap[kode].sDS += qty;
+        else if (jenis === "MANUAL") monitorMap[kode].sMN += qty;
+    });
+
+    console.log("HASIL MONITORING FINAL:", monitorMap);
+
+    renderMonitorTable(monitorMap);
+    document.getElementById('modal_monitor').style.display = 'block';
+}
+
+
+function renderMonitorTable(dataMap) {
+    const container = document.getElementById('monitor_content');
+    let html = `<table class="table-monitor">
+        <thead>
+            <tr>
+                <th>URPICK</th>
+                <th>TOKO</th>
+                <th>KN (T/S)</th>
+                <th>DS (T/S)</th>
+                <th>MN (T/S)</th>
+                <th>STATUS</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    Object.values(dataMap).forEach(d => {
+        const isMatch = (d.tKN === d.sKN) && (d.tDS === d.sDS) && (d.tMN === d.sMN);
         
-        allTarget.forEach(item => {
-            const key = `${item.urpick}-${item.kodeToko}`;
-            if (!monitorMap[key]) {
-                monitorMap[key] = {
-                    urpick: item.urpick, kode: item.kodeToko, nama: item.namaToko,
-                    target: { KL: 0, DS: 0, MN: 0 },
-                    scan: { KL: 0, DS: 0, MN: 0 }
-                };
-            }
-            const kVal = (item.kontainer || "").toUpperCase();
-            if (kVal.includes("DOS")) {
-                monitorMap[key].target.DS += parseInt(item.qtyData || 0);
-            } else if (kVal === "" || kVal === "MANUAL") {
-                monitorMap[key].target.MN += parseInt(item.qtyData || 0);
-            } else {
-                monitorMap[key].target.KL += 1;
-            }
-        });
+        // Fungsi pembantu untuk memberi warna merah jika belum match
+        const formatTS = (t, s) => `<span style="color: ${t === s ? 'black' : 'red'}">${t}/${s}</span>`;
 
-        dataSudahPolcek.forEach(s => {
-            if (s.tgl === tglCheck) {
-                const key = `${s.urpick}-${s.kode}`;
-                if (monitorMap[key]) {
-                    const j = s.jenis.toUpperCase();
-                    if (j === "KONTAINER") {
-                        monitorMap[key].scan.KL += 1;
-                    } else if (j === "DOS") {
-                        monitorMap[key].scan.DS += parseFloat(s.qty_scan || 0);
-                    } else if (j === "MANUAL") {
-                        monitorMap[key].scan.MN += parseFloat(s.qty_scan || 0);
-                    }
-                }
-            }
-        });
-
-        renderMonitorTable(monitorMap, tglCheck);
-    }
-
-    function renderMonitorTable(monitorMap, tgl) {
-        let html = `
-            <table style="width:100%; border-collapse:collapse; font-size:10px; border:1px solid #444;">
-                <thead>
-                    <tr style="background:#2c3e50; color:white;">
-                        <th rowspan="2" style="border:1px solid #444;">URP</th>
-                        <th rowspan="2" style="border:1px solid #444;">TOKO</th>
-                        <th colspan="3" style="border:1px solid #444;">TARGET</th>
-                        <th colspan="3" style="border:1px solid #444;">SCAN</th>
-                        <th rowspan="2" style="border:1px solid #444;">ST</th>
-                    </tr>
-                    <tr style="background:#34495e; color:white;">
-                        <th>KL</th><th>DS</th><th>MN</th><th>KL</th><th>DS</th><th>MN</th>
-                    </tr>
-                </thead>
-                <tbody>`;
-
-        const sortedKeys = Object.keys(monitorMap).sort((a, b) => parseInt(monitorMap[a].urpick) - parseInt(monitorMap[b].urpick));
-
-        sortedKeys.forEach(k => {
-            const m = monitorMap[k];
-            const isDone = (m.scan.KL >= m.target.KL && m.scan.DS >= m.target.DS && m.scan.MN >= m.target.MN);
-            const hasStarted = (m.scan.KL + m.scan.DS + m.scan.MN > 0);
-            const rowStyle = isDone ? "background:#d4edda;" : (hasStarted ? "background:#fff3cd;" : "");
-
-            html += `
-                <tr style="${rowStyle} text-align:center; border-bottom:1px solid #ccc;">
-                    <td style="padding:5px;">${m.urpick}</td>
-                    <td style="text-align:left; padding-left:3px;"><b>${m.kode}</b></td>
-                    <td>${m.target.KL}</td><td>${m.target.DS}</td><td>${m.target.MN}</td>
-                    <td style="font-weight:bold; color:blue;">${m.scan.KL}</td>
-                    <td style="font-weight:bold; color:blue;">${m.scan.DS}</td>
-                    <td style="font-weight:bold; color:blue;">${m.scan.MN}</td>
-                    <td>${isDone ? '✅' : '⏳'}</td>
-                </tr>`;
-        });
-
-        html += `</tbody></table>`;
-
-        document.getElementById('report_title').innerText = "REAL-TIME MONITORING";
-        document.getElementById('report_info').innerHTML = `<b>TANGGAL: ${tgl}</b>`;
-        document.getElementById('report_head').style.display = 'none'; 
-        document.getElementById('btn_finalisasi').style.display = 'none'; 
-        document.getElementById('report_body').innerHTML = `<tr><td colspan="4" style="padding:0;">${html}</td></tr>`;
-        document.getElementById('modal_report').style.display = 'block';
-    }
+        html += `
+            <tr>
+                <td>${d.urpick}</td>
+                <td style="text-align:left">${d.kode}</td>
+                <td>${formatTS(d.tKN, d.sKN)}</td>
+                <td>${formatTS(d.tDS, d.sDS)}</td>
+                <td>${formatTS(d.tMN, d.sMN)}</td>
+                <td>${isMatch ? "✅" : "⏳"}</td>
+            </tr>`;
+    });
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+}
 
     function closeMonitoring() {
         document.getElementById('modal_report').style.display = 'none';
@@ -557,22 +880,48 @@ const G_URL = "https://script.google.com/macros/s/AKfycbx3WQX1-tOhOtShQMmJKovfoq
     }
 
     async function revisiQty(key, barcode) {
-        document.getElementById('modal_report').style.display = 'none';
-        const { value: otp } = await Swal.fire({ title: 'OTP Revisi', input: 'password', inputLabel: 'input Pin', showCancelButton: true });
-        if (otp === "234") {
-            const { value: newQty } = await Swal.fire({ title: 'Qty Baru', input: 'number', showCancelButton: true });
-            if (newQty !== null && newQty !== "") {
-                let allData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-                const idx = allData.findIndex(i => i.jenis === document.getElementById('p_jenis').value && i.faktur === document.getElementById('p_faktur').value && i.kode === document.getElementById('p_kode').value && (i.barcode === barcode || i.plu === barcode || i.barcode.includes(barcode)));
-                if (idx !== -1) { 
-                    allData[idx].qty_scan = parseInt(newQty); 
-                    localStorage.setItem('q_polcek', JSON.stringify(allData)); 
-                    Swal.fire("Berhasil", "Qty Diperbarui", "success"); 
-                }
+    // 1. Tutup modal utama (Point 11)
+    document.getElementById('modal_report').style.display = 'none';
+
+    // 2. Minta OTP
+    const { value: otp } = await Swal.fire({ 
+        title: 'Minta OTP', 
+        input: 'password', 
+        inputLabel: 'Masukkan PIN Revisi', 
+        showCancelButton: true 
+    });
+
+    if (otp === "234") {
+        // 3. Input Qty Baru
+        const { value: newQty } = await Swal.fire({ 
+            title: 'Input Qty Baru', 
+            input: 'number', 
+            showCancelButton: true 
+        });
+
+        if (newQty !== null && newQty !== "") {
+            let allData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+            // Cari data berdasarkan barcode atau PLU
+            const idx = allData.findIndex(i => 
+                i.kode === document.getElementById('p_kode').value && 
+                (i.barcode === barcode || i.plu === barcode || i.barcode.includes(barcode))
+            );
+            
+            if (idx !== -1) { 
+                allData[idx].qty_scan = parseInt(newQty); 
+                localStorage.setItem('q_polcek', JSON.stringify(allData));
+                
+                // Notifikasi sukses sebelum balik ke modal
+                await Swal.fire({ title: "Berhasil", text: "Qty Diperbarui", icon: "success", timer: 1000, showConfirmButton: false });
             }
         }
-        document.getElementById('modal_report').style.display = 'block';
+    } else if (otp !== undefined) {
+        await Swal.fire("Error", "OTP Salah!", "error");
     }
+
+    // 4. Otomatis kembali ke layar modal final (Point 11)
+    showReport(); 
+}
 
     // Fungsi showReport yang hilang sudah ditambahkan di sini
     function showReport() {
@@ -638,14 +987,105 @@ const G_URL = "https://script.google.com/macros/s/AKfycbx3WQX1-tOhOtShQMmJKovfoq
         btnFin.disabled = !(Object.keys(reportMap).length > 0 && isAllMatch);
         btnFin.style.opacity = btnFin.disabled ? "0.3" : "1";
     }
+
 function processStoreInput() {
     const kodeInput = document.getElementById('p_kode');
-    if (kodeInput) {
+    if (kodeInput && kodeInput.value.trim() !== "") {
         kodeInput.value = kodeInput.value.toUpperCase().trim();
-        // Setelah kode diisi, jalankan filter untuk mencari nama toko & faktur
-        runFilter(); 
+        
+        // Jalankan filter
+        const found = runFilter(); 
+
+        if (found) {
+            // Sesuai Tahap 8: Setelah input Kode Toko, fokus ke Faktur
+            setFocus('p_faktur');
+        } else {
+            notify("⚠️ Toko tidak ditemukan!", "error", "p_kode");
+        }
     }
 }
+
+function alurFokus(currentStep) {
+    if (currentStep === 'tgl') {
+        setFocus('p_jenis');
+    } else if (currentStep === 'jenis') {
+        setFocus('p_kode');
+    } else if (currentStep === 'kode') {
+        // runFilter() dipanggil di sini untuk mengisi No Faktur
+        runFilter(); 
+        setFocus('p_faktur');
+    } else if (currentStep === 'faktur') {
+        setFocus('p_scan_label');
+    }
+}
+
+function clearAllFields(isManual = true) {
+    if(isManual) {
+        // Jika ditekan tombol Clear (Point 12)
+        const yakin = confirm("Hapus Semua Inputan?");
+        if(!yakin) return;
+    }
+
+    // Reset Dropdown ke default
+    document.getElementById('p_jenis').value = "";
+    document.getElementById('p_faktur').innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
+    
+    // Kosongkan semua inputan teks
+    const ids = ['p_kode','p_nama','p_urpick','p_scan_label','p_scan_fisik','p_plu','p_descp','p_zona','p_qty_input','p_qty_data'];
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.value = "";
+    });
+
+    // Reset area fisik & readonly qty
+    document.getElementById('area_fisik').style.display = 'none';
+    const qtyInp = document.getElementById('p_qty_input');
+    qtyInp.readOnly = true; 
+    qtyInp.style.background = "#dcdcdc";
+
+    // Fokus kembali ke TGL atau JENIS
+    setFocus('p_tgl');
+}
+
+// Tambahkan listener pada TGL dan JENIS untuk trigger reset (Point 9)
+document.getElementById('p_tgl').addEventListener('change', () => {
+    // Jika ganti tanggal, reset semua field di bawahnya
+    ['p_kode','p_nama','p_urpick','p_scan_label'].forEach(id => document.getElementById(id).value = "");
+    document.getElementById('p_faktur').innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
+});
+
+async function refreshMonitoringData() {
+    const loader = document.getElementById('loader');
+    loader.style.display = 'flex';
+
+    try {
+        const res = await fetch(G_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "getAllData" })
+        });
+        const out = await res.json();
+
+        if (out.status !== "success") throw "Server error";
+
+        // 🔥 INI SUMBER UTAMA MONITORING
+        dbSudahPolcek = (out.dataSudahPolcek || []).map(r => ({
+            tgl: String(r.tgl).substring(0, 10),
+            kode: String(r.kode).trim().toUpperCase(),
+            jenis: String(r.jenis).trim().toUpperCase(),
+            qty_scan: Number(r.qty_scan) || 0
+        }));
+
+        localStorage.setItem("db_sudah_polcek", JSON.stringify(dbSudahPolcek));
+
+        showMonitoring(); // ⬅️ BARU BOLEH DIPANGGIL DI SINI
+    } catch (e) {
+        Swal.fire("Gagal Sync", "Tidak bisa ambil data server", "error");
+    } finally {
+        loader.style.display = 'none';
+    }
+}
+
+
 </script>
 </body>
 </html>
