@@ -58,7 +58,37 @@
         input[readonly] { background: #dcdcdc; color: #333; }
         .footer { display: flex; gap: 8px; margin-top: 15px; }
         .btn-main { flex: 1; padding: 15px; border: none; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; font-size: 12px; }
-        #loader { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; color: white; }
+        #loader {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7); /* Background gelap transparan */
+    /* Z-INDEX HARUS LEBIH TINGGI DARI MODAL (biasanya modal itu 1000-2000) */
+    z-index: 99999; 
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    color: white;
+}
+
+/* Tambahkan animasi putar agar lebih jelas sedang proses */
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
 
 /*CSS khusus tabel monitoring*/
     .table-monitor { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
@@ -82,6 +112,12 @@
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+
+.my-swal-z-index {
+    z-index: 99999 !important; /* Angka tertinggi agar tidak tertutup apapun */
+}
+
+
 </style>
 
 </head>
@@ -92,6 +128,8 @@
         <button class="btn-close-modal" onclick="document.getElementById('modal_monitor').style.display='none'">×</button>
         
         <h3 style="text-align:center; margin-top:0; color: #2c3e50;">MONITORING POLCEK</h3>
+
+<p id="monitor_date" style="text-align:center; font-size:10px; font-weight:bold; margin-top:-10px; color: #555;"></p>
 <button onclick="refreshMonitoringData()" style="background: #27ae60; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer;">
                 🔄 Sync Data
             </button>
@@ -116,7 +154,7 @@
   <div class="circle-loader"></div>
 
   <p style="margin-top:15px; font-size:14px; font-weight:bold; color:#ffffff;">
-    Sedang mengambil data master, mohon tunggu...
+    Update data master, mohon tunggu...
   </p>
 </div>
 
@@ -130,6 +168,10 @@
         <div class="input-row"><input type="text" id="l_nama" placeholder="NAMA" readonly></div>
         <div class="input-row"><input type="password" id="l_pass" placeholder="PASSWORD"></div>
         <button class="btn-main" style="background:var(--green); width:100%; margin-top:10px;" onclick="doLogin()">MASUK APLIKASI</button>
+<div style="text-align:center; margin-top:15px;">
+    <a href="javascript:void(0)" onclick="openResetModal()" style="color: #2980b9; font-size: 13px; text-decoration: none; font-weight: bold;">Update Password?</a>
+</div>
+
     </div>
 </div>
 
@@ -188,7 +230,7 @@
         <div id="report_container" style="overflow-x:auto;">
             <table border="1" style="width:100%; border-collapse:collapse; font-size:11px; text-align:center;">
                 <thead id="report_head">
-                    <tr style="background:#eee;"><th>ITEM / KOLI</th><th>TARGET</th><th>SCAN</th><th>STATUS</th></tr>
+                    <tr style="background:#eee;"><th>KONTAINER</th><th>QTY</th><th>POLCEK</th><th>STATUS</th></tr>
                 </thead>
                 <tbody id="report_body"></tbody>
             </table>
@@ -200,13 +242,116 @@
     </div>
 </div>
 
+<div id="modal_reset" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:30000; display:none; justify-content:center; align-items:center; padding:20px;">
+    <div style="background:white; border-radius:15px; padding:20px; width:100%; max-width:350px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); position:relative;">
+        <h3 style="text-align:center; color: #2c3e50; margin-top:0;">UPDATE PASSWORD</h3>
+        <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
+        
+        <div style="margin-bottom: 12px;">
+            <label style="font-size:12px; font-weight:bold; color:#7f8c8d;">NIK :</label>
+            <input type="text" id="r_nik" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;" placeholder="Masukkan NIK">
+        </div>
+        <div style="margin-bottom: 12px;">
+            <label style="font-size:12px; font-weight:bold; color:#7f8c8d;">PASSWORD LAMA :</label>
+            <input type="password" id="r_pass_lama" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;" placeholder="******">
+        </div>
+        <div style="margin-bottom: 20px;">
+            <label style="font-size:12px; font-weight:bold; color:#7f8c8d;">PASSWORD BARU :</label>
+            <input type="password" id="r_pass_baru" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;" placeholder="******">
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+            <button onclick="closeResetModal()" style="flex:1; background:#95a5a6; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">BATAL</button>
+            <button onclick="processResetPassword()" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">SIMPAN</button>
+        </div>
+    </div>
+</div>
+
 <script>
-const G_URL = "https://script.google.com/macros/s/AKfycbyBLdbv9U3824IftW11YnZG6Cu67gMdeIVvk_yGEsbkZ3Upwwe0H8A8DYwRDYp_Xgk/exec";
+const G_URL = "https://script.google.com/macros/s/AKfycbxy1ZIh1A6RTrBjNpyFu10rVHTh6OXaDjJ02PUoGap-Aok3qNaIeEvWbsKSENuT7Wc/exec";
     var dbPickAuto = [], dbMasterBarcode = [], dbManual = [], dbSudahPolcek = [];
 var currentUser = "";
 var CACHED_DATA = null;
 
-    const usersDB = [{ nik: "10030732", nama: "URIP PRADIPTA", pass: "234" }];
+    const usersDB = [
+    { nik: "10030732", nama: "URIP PRADIPTA", pass: "234" },
+    { nik: "21084962", nama: "BASYUDIN KADRI", pass: "234" },
+    { nik: "22116378", nama: "IRWAN", pass: "234" },
+    { nik: "06081095", nama: "AHMAD DJAINUDIN", pass: "234" },
+    { nik: "13023500", nama: "AAN SUBHAN", pass: "234" },
+    { nik: "06080176", nama: "RUDIYANTO", pass: "234" },
+    { nik: "12124371", nama: "ARFA", pass: "234" },
+    { nik: "15044455", nama: "ABD KADIR", pass: "234" },
+    { nik: "06040353", nama: "YUSUP", pass: "234" },
+    { nik: "13104668", nama: "DENADA", pass: "234" },
+    { nik: "15093836", nama: "WAHYU DARUS RAMADHAN", pass: "234" },
+    { nik: "11126379", nama: "ABDUL WARIS", pass: "234" },
+    { nik: "15034964", nama: "SYARIF", pass: "234" },
+    { nik: "15042057", nama: "FAJAR ABU THALIB", pass: "234" },
+    { nik: "15042969", nama: "JUMAING", pass: "234" },
+    { nik: "15052579", nama: "FIRMAN", pass: "234" },
+    { nik: "15117277", nama: "ASRIADI", pass: "234" },
+    { nik: "16016211", nama: "AKBAR T", pass: "234" },
+    { nik: "10093059", nama: "MUSLIMIN", pass: "234" },
+    { nik: "15033310", nama: "RAMLI S", pass: "234" },
+    { nik: "12068137", nama: "SUWANDI", pass: "234" },
+    { nik: "12067459", nama: "PATAHUDDIN", pass: "234" },
+    { nik: "15112754", nama: "MUH ARHAM YUBDAL", pass: "234" },
+    { nik: "13052840", nama: "JAFAR", pass: "234" },
+    { nik: "20015892", nama: "ASRAN. A", pass: "234" },
+    { nik: "12092687", nama: "MAULANA YUSUP", pass: "234" },
+    { nik: "04060256", nama: "ABDULAH K. MUTOHAR", pass: "234" },
+    { nik: "18077047", nama: "GENIAL FADILAT ARASY", pass: "234" },
+    { nik: "18124171", nama: "HASTOMO", pass: "234" },
+    { nik: "19015561", nama: "ADETIANI KURNIYA PRAT", pass: "234" },
+    { nik: "21055244", nama: "ELOY REMBON", pass: "234" },
+    { nik: "21104196", nama: "ALHANNAS", pass: "234" },
+    { nik: "13013523", nama: "ANDI AHMAD", pass: "234" },
+    { nik: "13013538", nama: "NASRUN B", pass: "234" },
+    { nik: "19088924", density: "IBNU MUNSIR", pass: "234" },
+    { nik: "19088919", nama: "MUH SABIR", pass: "234" },
+    { nik: "11022706", nama: "MUH SIGIT A", pass: "234" },
+    { nik: "22016350", nama: "IRWANSYAH", pass: "234" },
+    { nik: "19103817", nama: "AMRI ADI", pass: "234" },
+    { nik: "19103821", nama: "JOKO DWI ASTRAWAN", pass: "234" },
+    { nik: "13023392", nama: "MUH ZAENAL", pass: "234" },
+    { nik: "20032629", nama: "RAHMAT ZULKIFLI", pass: "234" },
+    { nik: "20042761", nama: "AGUNG RAHMAT", pass: "234" },
+    { nik: "21021951", nama: "NUR ANDIKA", pass: "234" },
+    { nik: "20123889", nama: "SADDAM HUSAIN", pass: "234" },
+    { nik: "22067161", nama: "ABD RAHMAN", pass: "234" },
+    { nik: "21041579", nama: "MUHAMMAD RIJAL", pass: "234" },
+    { nik: "13063625", nama: "MOCH. NURCAHYO Y.", pass: "234" },
+    { nik: "21082748", nama: "NASRULLAH", pass: "234" },
+    { nik: "13071183", nama: "HAKIM", pass: "234" },
+    { nik: "13074665", nama: "ABDUL KHAIR", pass: "234" },
+    { nik: "07060205", nama: "YUSUP ISKANDAR", pass: "234" },
+    { nik: "11084748", nama: "MUH.HAEDIR", pass: "234" },
+    { nik: "11085162", nama: "NUR AMAL", pass: "234" },
+    { nik: "14032387", nama: "MUHAMAD FURQON", pass: "234" },
+    { nik: "11095305", nama: "AHMAD", pass: "234" },
+    { nik: "09040248", nama: "DICKI ISKANDAR ZULKAR", pass: "234" },
+    { nik: "11095472", nama: "SYARIFUDDIN", pass: "234" },
+    { nik: "14066101", nama: "MUH NUR", pass: "234" },
+    { nik: "11124107", nama: "MUHAMMAD AMIR", pass: "234" },
+    { nik: "12015655", nama: "AHMAD JUNAEDI", pass: "234" },
+    { nik: "12021938", nama: "ALI NURHIDIN", pass: "234" },
+    { nik: "01020239", nama: "ASBAR", pass: "234" },
+    { nik: "19106316", nama: "TAUFIK HIDAYAT AMIN", pass: "234" },
+    { nik: "14022759", nama: "MUHIDDIN", pass: "234" },
+    { nik: "21091494", nama: "ARLAN", pass: "234" },
+    { nik: "18012062", nama: "M. MIFTAHUL MUNIF", pass: "234" },
+    { nik: "19032172", nama: "SUPRIADI", pass: "234" },
+    { nik: "19085644", nama: "ABDUL JALIL", pass: "234" },
+    { nik: "21126790", nama: "HAERUL", pass: "234" },
+    { nik: "20121101", nama: "AHMAD TAUFIQ. L", pass: "234" },
+    { nik: "20121097", nama: "MUH. ALIF FAJRING", pass: "234" },
+    { nik: "11084798", nama: "RIZKI", pass: "234" },
+    { nik: "03030112", nama: "IRWAN", pass: "234" },
+    { nik: "01060319", nama: "BASUKI", pass: "234" },
+    { nik: "10062381", nama: "REZKA SURYANTO", pass: "234" },
+    { nik: "08081171", nama: "LINGGA OKTA", pass: "234" }
+];
 
     async function initApp() {
     const loader = document.getElementById('loader');
@@ -224,12 +369,19 @@ var CACHED_DATA = null;
         
         const out = await res.json();
         
-        if (out && out.status === "success") {
-            // Update variabel global
-            dbPickAuto = out.pickAuto || [];
-            dbMasterBarcode = out.masterBarcode || [];
-            dbManual = out.dataManual || [];
-            dbSudahPolcek = out.dataSudahPolcek || []; 
+ if (out && out.status === "success") {
+    dbPickAuto = out.pickAuto || [];
+    dbMasterBarcode = out.masterBarcode || [];
+    dbManual = out.dataManual || [];
+    
+    // Pastikan barcode ikut ditarik di sini juga
+    dbSudahPolcek = (out.dataSudahPolcek || []).map(r => ({
+        tgl: String(r.tgl).substring(0, 10),
+        kode: String(r.kode).trim().toUpperCase(),
+        jenis: String(r.jenis).trim().toUpperCase(),
+        barcode: String(r.barcode || "").trim().toUpperCase(), 
+        qty_scan: Number(r.qty_scan) || 0
+    }));
 
             // Simpan ke memory fisik HP
             localStorage.setItem("db_pick_auto", JSON.stringify(dbPickAuto));
@@ -290,7 +442,7 @@ var CACHED_DATA = null;
         }
     }
 
-    function doLogin() {
+function doLogin() {
     const nik = document.getElementById('l_nik').value;
     const pass = document.getElementById('l_pass').value;
     const user = usersDB.find(u => u.nik === nik && u.pass === pass);
@@ -304,9 +456,30 @@ var CACHED_DATA = null;
         // Jalankan initApp untuk menarik data terbaru dari server
         initApp(); 
     } else { 
-        Swal.fire("Gagal", "NIK atau Password Salah!", "error"); 
+        // FIX: Menambahkan properti khusus agar pop-up melompat keluar dari layar login
+        Swal.fire({
+            title: "Gagal",
+            text: "Kombinasi NIK dan Password Salah",
+            icon: "error",
+            target: document.body, // Memastikan pop-up menempel di body, bukan di div login
+            heightAuto: false,
+            allowOutsideClick: false,
+            confirmButtonColor: '#d33',
+            customClass: {
+                container: 'my-swal-z-index' // Kita beri kelas khusus
+            }
+        }); 
+        
+        // Bersihkan input password agar user bisa langsung coba lagi
+        document.getElementById('l_pass').value = "";
+        document.getElementById('l_nik').focus();
     }
 }
+document.getElementById('l_pass').addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') {
+        doLogin();
+    }
+});
 
     function doLogout() {
     Swal.fire({
@@ -407,12 +580,32 @@ var CACHED_DATA = null;
     }
 }
 
-    function validateScanLabel() {
+function validateScanLabel() {
         const scanVal = document.getElementById('p_scan_label').value.trim();
         const jenisVal = document.getElementById('p_jenis').value;
         const fakturVal = document.getElementById('p_faktur').value;
+        const tglPilih = document.getElementById('p_tgl').value;
         const kodeToko = document.getElementById('p_kode').value.toUpperCase();
+
         if (!scanVal) return;
+
+        // --- VALIDASI LOGIKA BARU: CEK FINAL SERVER (TOKO + JENIS + TGL) ---
+        const sudahFinalDiServer = dbSudahPolcek.some(s => 
+            s.tgl === tglPilih && 
+            s.kode === kodeToko && 
+            s.jenis === jenisVal
+        );
+
+        if (sudahFinalDiServer) {
+            document.getElementById('p_scan_label').value = "";
+            return Swal.fire({
+                icon: 'error',
+                title: 'Akses Ditolak',
+                text: `Toko ${kodeToko} untuk jenis ${jenisVal} sudah Final Polcek.`,
+            });
+        }
+        // ------------------------------------------------------------------
+
         const parts = scanVal.split('-').filter(Boolean);
 
         if (jenisVal === "KONTAINER") {
@@ -446,6 +639,8 @@ var CACHED_DATA = null;
             setFocus('p_qty_input');
         }
     }
+
+
 
     function validateScanFisik() {
     const scanFisik = document.getElementById('p_scan_fisik').value.trim();
@@ -750,6 +945,8 @@ function showMonitoring() {
         return;
     }
 
+document.getElementById('monitor_date').innerHTML = `TANGGAL PROSES: <span style="color: #2980b9;">${tglRaw}</span>`;
+
     const clean = v => String(v || "").trim().toUpperCase();
     const tglTarget = tglRaw.substring(0, 10);
 
@@ -834,6 +1031,7 @@ function showMonitoring() {
 
     renderMonitorTable(monitorMap);
     document.getElementById('modal_monitor').style.display = 'block';
+
 }
 
 
@@ -952,8 +1150,9 @@ function renderMonitorTable(dataMap) {
 
             targetData.forEach(item => {
                 const kMaster = (item.kontainer || "MANUAL").toUpperCase();
+                // PERBAIKAN: Untuk KONTAINER, gunakan kMaster saja sebagai key tanpa deskripsi tambahan agar tidak duplikat
                 let key = (jenis === "KONTAINER") ? kMaster : (jenis === "DOS" ? `${kMaster} | ${item.plu}` : item.plu);
-                if (!reportMap[key]) reportMap[key] = { desc: item.descp || kMaster, target: 0, scan: 0 };
+                if (!reportMap[key]) reportMap[key] = { desc: (jenis === "KONTAINER") ? "" : (item.descp || kMaster), target: 0, scan: 0 };
                 reportMap[key].target += (jenis === "KONTAINER") ? 1 : parseInt(item.qtyData || 0);
             });
 
@@ -975,8 +1174,14 @@ function renderMonitorTable(dataMap) {
             const r = reportMap[key];
             const status = (r.target === "N/A" || r.scan === r.target) ? "MATCH" : (r.scan < r.target ? "PENDING" : "OVER");
             if (status !== "MATCH") isAllMatch = false;
+            
+            // Format tampilan baris: Jika kontainer, jangan tampilkan baris deskripsi kecil di bawah judul key
+            const displayDesc = (jenis === "KONTAINER" || !r.desc) ? "" : `<br><small>${r.desc}</small>`;
+
             html += `<tr style="background:${status === 'MATCH' ? '#d4edda' : (status === 'PENDING' ? '#f8d7da' : '#fff3cd')}">
-                <td style="text-align:left; padding:5px;"><b>${key}</b><br><small>${r.desc}</small></td><td>${r.target}</td><td>${r.scan}</td>
+                <td style="text-align:left; padding:5px;"><b>${key}</b>${displayDesc}</td>
+                <td>${r.target}</td>
+                <td>${r.scan}</td>
                 <td><b>${status}</b><br><button onclick="revisiQty('${key}', '${key.includes(' | ') ? key.split(' | ')[1] : key}')" style="font-size:10px; background:#f39c12; color:white; border:none; border-radius:3px; padding:3px 8px;">REVISI</button></td></tr>`;
         });
 
@@ -1056,7 +1261,10 @@ document.getElementById('p_tgl').addEventListener('change', () => {
 
 async function refreshMonitoringData() {
     const loader = document.getElementById('loader');
-    loader.style.display = 'flex';
+    const modalMonitor = document.getElementById('modal_monitor');
+
+    modalMonitor.style.display = 'none'; // Tutup dulu
+    loader.style.display = 'flex';       // Muncul loader
 
     try {
         const res = await fetch(G_URL, {
@@ -1065,26 +1273,74 @@ async function refreshMonitoringData() {
         });
         const out = await res.json();
 
-        if (out.status !== "success") throw "Server error";
-
-        // 🔥 INI SUMBER UTAMA MONITORING
-        dbSudahPolcek = (out.dataSudahPolcek || []).map(r => ({
-            tgl: String(r.tgl).substring(0, 10),
-            kode: String(r.kode).trim().toUpperCase(),
-            jenis: String(r.jenis).trim().toUpperCase(),
-            qty_scan: Number(r.qty_scan) || 0
-        }));
-
-        localStorage.setItem("db_sudah_polcek", JSON.stringify(dbSudahPolcek));
-
-        showMonitoring(); // ⬅️ BARU BOLEH DIPANGGIL DI SINI
+        if (out.status === "success") {
+            // Update dbSudahPolcek
+            dbSudahPolcek = (out.dataSudahPolcek || []).map(r => ({
+                tgl: String(r.tgl || "").substring(0, 10),
+                kode: String(r.kode || "").trim().toUpperCase(),
+                jenis: String(r.jenis || "").trim().toUpperCase(),
+                barcode: String(r.barcode || "").trim().toUpperCase(), 
+                qty_scan: Number(r.qty_scan || 0)
+            }));
+            localStorage.setItem("db_sudah_polcek", JSON.stringify(dbSudahPolcek));
+        }
     } catch (e) {
-        Swal.fire("Gagal Sync", "Tidak bisa ambil data server", "error");
+        Swal.fire("Gagal", "Koneksi Bermasalah", "error");
     } finally {
-        loader.style.display = 'none';
+        loader.style.display = 'none'; // Matikan loader
+        
+        // JALANKAN INI UNTUK MEMBUKA KEMBALI MODAL
+        showMonitoring(); 
     }
 }
 
+function openResetModal() {
+    document.getElementById('modal_reset').style.display = 'flex';
+}
+
+function closeResetModal() {
+    document.getElementById('modal_reset').style.display = 'none';
+    document.getElementById('r_nik').value = "";
+    document.getElementById('r_pass_lama').value = "";
+    document.getElementById('r_pass_baru').value = "";
+}
+
+async function processResetPassword() {
+    const nik = document.getElementById('r_nik').value;
+    const passLama = document.getElementById('r_pass_lama').value;
+    const passBaru = document.getElementById('r_pass_baru').value;
+
+    if (!nik || !passLama || !passBaru) {
+        return Swal.fire("Gagal", "Semua field harus diisi!", "error");
+    }
+
+    // Tampilkan Loader
+    document.getElementById('loader').style.display = 'flex';
+
+    try {
+        const res = await fetch(G_URL, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                action: "updatePassword", 
+                nik: nik, 
+                passLama: passLama, 
+                passBaru: passBaru 
+            })
+        });
+        const out = await res.json();
+
+        if (out.status === "success") {
+            Swal.fire("Berhasil", "Password berhasil diperbarui!", "success");
+            closeResetModal();
+        } else {
+            Swal.fire("Gagal", out.message || "Password lama salah!", "error");
+        }
+    } catch (e) {
+        Swal.fire("Error", "Koneksi ke server bermasalah", "error");
+    } finally {
+        document.getElementById('loader').style.display = 'none';
+    }
+}
 
 </script>
 </body>
