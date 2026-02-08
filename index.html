@@ -1166,75 +1166,78 @@ function renderMonitorTable(dataMap) {
 
     // Fungsi showReport yang hilang sudah ditambahkan di sini
     function showReport() {
-        const tglRaw = document.getElementById('p_tgl').value;
-        const kode = document.getElementById('p_kode').value.trim().toUpperCase();
-        const jenis = document.getElementById('p_jenis').value;
-        const faktur = document.getElementById('p_faktur').value;
-        if (!tglRaw || !kode || !faktur) return Swal.fire("Peringatan", "Lengkapi data Toko dan Faktur!", "warning");
+    const tglRaw = document.getElementById('p_tgl').value;
+    const kode = document.getElementById('p_kode').value.trim().toUpperCase();
+    const jenis = document.getElementById('p_jenis').value;
+    const faktur = document.getElementById('p_faktur').value;
+    if (!tglRaw || !kode || !faktur) return Swal.fire("Peringatan", "Lengkapi data Toko dan Faktur!", "warning");
 
-        const scanDB = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-        const aktualData = scanDB.filter(i => i.tgl === tglRaw && i.kode === kode && i.faktur === faktur && i.jenis === jenis);
+    const scanDB = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+    const aktualData = scanDB.filter(i => i.tgl === tglRaw && i.kode === kode && i.faktur === faktur && i.jenis === jenis);
 
-        const d = new Date(tglRaw);
-        const tglCheck = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
-        
-        let reportMap = {};
-        let isAllMatch = true;
-        let isComparisonType = ["KONTAINER", "DOS", "MANUAL"].includes(jenis);
+    const d = new Date(tglRaw);
+    const tglCheck = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+    
+    let reportMap = {};
+    let isAllMatch = true; // Akan tetap true jika semua "DONE"
+    let isComparisonType = ["KONTAINER", "DOS", "MANUAL"].includes(jenis);
 
-        if (isComparisonType) {
-            const currentDB = (jenis === "MANUAL") ? dbManual : dbPickAuto;
-            const targetData = currentDB.filter(i => {
-                if (!(i.tglInput === tglCheck && i.kodeToko === kode && i.faktur === faktur)) return false;
-                const kVal = (i.kontainer || "").toUpperCase();
-                const isD = kVal.includes("DOS");
-                return jenis === "KONTAINER" ? !isD : (jenis === "DOS" ? isD : true);
-            });
-
-            targetData.forEach(item => {
-                const kMaster = (item.kontainer || "MANUAL").toUpperCase();
-                // PERBAIKAN: Untuk KONTAINER, gunakan kMaster saja sebagai key tanpa deskripsi tambahan agar tidak duplikat
-                let key = (jenis === "KONTAINER") ? kMaster : (jenis === "DOS" ? `${kMaster} | ${item.plu}` : item.plu);
-                if (!reportMap[key]) reportMap[key] = { desc: (jenis === "KONTAINER") ? "" : (item.descp || kMaster), target: 0, scan: 0 };
-                reportMap[key].target += (jenis === "KONTAINER") ? 1 : parseInt(item.qtyData || 0);
-            });
-
-            aktualData.forEach(item => {
-                const parts = (item.barcode || "").split('-').filter(Boolean);
-                let keyScan = (jenis === "KONTAINER") ? parts[0].toUpperCase() : (jenis === "DOS" ? `${parts[0]}-${parts[1]} | ${item.plu}`.toUpperCase() : (parts[parts.length - 1] || item.plu));
-                if (reportMap[keyScan]) reportMap[keyScan].scan += parseInt(item.qty_scan || 0);
-                else reportMap[keyScan] = { desc: item.descp || "OVER", target: 0, scan: parseInt(item.qty_scan || 0) };
-            });
-        } else {
-            aktualData.forEach(item => {
-                const key = item.barcode || item.plu || "ITEM";
-                reportMap[key] = { desc: item.descp || "DATA INPUT", target: "N/A", scan: parseInt(item.qty_scan || 0) };
-            });
-        }
-
-        let html = "";
-        Object.keys(reportMap).forEach(key => {
-            const r = reportMap[key];
-            const status = (r.target === "N/A" || r.scan === r.target) ? "DONE" : (r.scan < r.target ? "PENDING" : "OVER");
-            if (status !== "MATCH") isAllMatch = false;
-            
-            // Format tampilan baris: Jika kontainer, jangan tampilkan baris deskripsi kecil di bawah judul key
-            const displayDesc = (jenis === "KONTAINER" || !r.desc) ? "" : `<br><small>${r.desc}</small>`;
-
-            html += `<tr style="background:${status === 'MATCH' ? '#d4edda' : (status === 'PENDING' ? '#f8d7da' : '#fff3cd')}">
-                <td style="text-align:left; padding:5px;"><b>${key}</b>${displayDesc}</td>
-                <td>${r.target}</td>
-                <td>${r.scan}</td>
-                <td><b>${status}</b><br><button onclick="revisiQty('${key}', '${key.includes(' | ') ? key.split(' | ')[1] : key}')" style="font-size:10px; background:#f39c12; color:white; border:none; border-radius:3px; padding:3px 8px;">REVISI</button></td></tr>`;
+    if (isComparisonType) {
+        const currentDB = (jenis === "MANUAL") ? dbManual : dbPickAuto;
+        const targetData = currentDB.filter(i => {
+            if (!(i.tglInput === tglCheck && i.kodeToko === kode && i.faktur === faktur)) return false;
+            const kVal = (i.kontainer || "").toUpperCase();
+            const isD = kVal.includes("DOS");
+            return jenis === "KONTAINER" ? !isD : (jenis === "DOS" ? isD : true);
         });
 
-        document.getElementById('report_info').innerHTML = `<b>${jenis}</b> | ${kode} | ${faktur}`;
-        document.getElementById('report_body').innerHTML = html || "<tr><td colspan='4'>Belum ada data</td></tr>";
-        document.getElementById('modal_report').style.display = 'block';
-        const btnFin = document.getElementById('btn_finalisasi');
-        btnFin.disabled = !(Object.keys(reportMap).length > 0 && isAllMatch);
-        btnFin.style.opacity = btnFin.disabled ? "0.3" : "1";
+        targetData.forEach(item => {
+            const kMaster = (item.kontainer || "MANUAL").toUpperCase();
+            let key = (jenis === "KONTAINER") ? kMaster : (jenis === "DOS" ? `${kMaster} | ${item.plu}` : item.plu);
+            if (!reportMap[key]) reportMap[key] = { desc: (jenis === "KONTAINER") ? "" : (item.descp || kMaster), target: 0, scan: 0 };
+            reportMap[key].target += (jenis === "KONTAINER") ? 1 : parseInt(item.qtyData || 0);
+        });
+
+        aktualData.forEach(item => {
+            const parts = (item.barcode || "").split('-').filter(Boolean);
+            let keyScan = (jenis === "KONTAINER") ? parts[0].toUpperCase() : (jenis === "DOS" ? `${parts[0]}-${parts[1]} | ${item.plu}`.toUpperCase() : (parts[parts.length - 1] || item.plu));
+            if (reportMap[keyScan]) reportMap[keyScan].scan += parseInt(item.qty_scan || 0);
+            else reportMap[keyScan] = { desc: item.descp || "OVER", target: 0, scan: parseInt(item.qty_scan || 0) };
+        });
+    } else {
+        aktualData.forEach(item => {
+            const key = item.barcode || item.plu || "ITEM";
+            reportMap[key] = { desc: item.descp || "DATA INPUT", target: "N/A", scan: parseInt(item.qty_scan || 0) };
+        });
     }
+
+    let html = "";
+    Object.keys(reportMap).forEach(key => {
+        const r = reportMap[key];
+        const status = (r.target === "N/A" || r.scan === r.target) ? "DONE" : (r.scan < r.target ? "PENDING" : "OVER");
+        
+        // PERBAIKAN DI SINI: Jika ada satu saja yang PENDING atau OVER, isAllMatch jadi false
+        if (status !== "DONE") isAllMatch = false; 
+        
+        const colorBg = status === 'DONE' ? '#d4edda' : (status === 'PENDING' ? '#f8d7da' : '#fff3cd');
+        const displayDesc = (jenis === "KONTAINER" || !r.desc) ? "" : `<br><small>${r.desc}</small>`;
+
+        html += `<tr style="background:${colorBg}">
+            <td style="text-align:left; padding:5px;"><b>${key}</b>${displayDesc}</td>
+            <td>${r.target}</td>
+            <td>${r.scan}</td>
+            <td><b>${status}</b><br><button onclick="revisiQty('${key}', '${key.includes(' | ') ? key.split(' | ')[1] : key}')" style="font-size:10px; background:#f39c12; color:white; border:none; border-radius:3px; padding:3px 8px;">REVISI</button></td></tr>`;
+    });
+
+    document.getElementById('report_info').innerHTML = `<b>${jenis}</b> | ${kode} | ${faktur}`;
+    document.getElementById('report_body').innerHTML = html || "<tr><td colspan='4'>Belum ada data</td></tr>";
+    document.getElementById('modal_report').style.display = 'block';
+    
+    // Aktifkan tombol jika isAllMatch true dan data tidak kosong
+    const btnFin = document.getElementById('btn_finalisasi');
+    btnFin.disabled = !(Object.keys(reportMap).length > 0 && isAllMatch);
+    btnFin.style.opacity = btnFin.disabled ? "0.3" : "1";
+}
 
 function processStoreInput() {
     const kodeInput = document.getElementById('p_kode');
