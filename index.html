@@ -484,6 +484,7 @@ function doLogin() {
     const user = usersDB.find(u => u.nik === nik && u.pass === pass);
     
     if (user) {
+aktifkanFullScreen();
         // Simpan status login permanen di memori HP
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("loggedUser", user.nama);
@@ -506,6 +507,17 @@ document.getElementById('l_pass').addEventListener('keypress', function (e) {
         doLogin();
     }
 });
+
+function aktifkanFullScreen() {
+    let doc = window.document;
+    let docEl = doc.documentElement;
+
+    let requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+    
+    if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+        requestFullScreen.call(docEl);
+    }
+}
 
     function doLogout() {
     Swal.fire({
