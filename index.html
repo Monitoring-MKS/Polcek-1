@@ -179,45 +179,49 @@
     <div class="header">POLCEK - WH MAKASSAR <br><span style="font-size: 9px; color: yellow;">V.01.02.26@ mks-bersatu</span></div>
     <div class="user-bar"><span>User: <b id="display_user">---</b></span><button class="btn-logout" onclick="doLogout()">LOGOUT</button></div>
 
-    <div class="input-row"><div class="label">TGL PROSES</div><input type="date" id="p_tgl" onchange="setFocus('p_jenis')"></div>
-    <div class="input-row">
-        <div class="label" style="background:var(--blue)">JENIS</div>
-        <select id="p_jenis" onchange="handleJenisChange()">
-            <option value="">-- PILIH JENIS --</option>
-            <option value="KONTAINER">KONTAINER</option>
-            <option value="DOS">DOS</option>
-            <option value="MANUAL">MANUAL</option>
-            <option value="TAG I">TAG I</option>
-            <option value="NON-LOKASI">NON-LOKASI</option>
-            <option value="TELUR">TELUR</option>
-            <option value="MKT">MKT</option>
-            <option value="ATK GS">ATK GS</option>
-            <option value="MATERAI">MATERAI</option>
-        </select>
+    <div id="group_header">
+        <div class="input-row"><div class="label">TGL PROSES</div><input type="date" id="p_tgl" onchange="setFocus('p_jenis')"></div>
+        <div class="input-row">
+            <div class="label" style="background:var(--blue)">JENIS</div>
+            <select id="p_jenis" onchange="handleJenisChange()">
+                <option value="">-- PILIH JENIS --</option>
+                <option value="KONTAINER">KONTAINER</option>
+                <option value="DOS">DOS</option>
+                <option value="MANUAL">MANUAL</option>
+                <option value="TAG I">TAG I</option>
+                <option value="NON-LOKASI">NON-LOKASI</option>
+                <option value="TELUR">TELUR</option>
+                <option value="MKT">MKT</option>
+                <option value="ATK GS">ATK GS</option>
+                <option value="MATERAI">MATERAI</option>
+            </select>
+        </div>
+        <div class="input-row"><div class="label">KD TOKO</div><input type="text" id="p_kode" placeholder="Scan/Ketik..." onchange="processStoreInput()"></div>
+        <div class="input-row"><div class="label">NAMA TOKO</div><input type="text" id="p_nama" readonly></div>
+        <div class="input-row"><div class="label">URPICK</div><input type="text" id="p_urpick" readonly></div>
+        <div class="input-row"><div class="label">NO FAKTUR</div><select id="p_faktur" onchange="toggleKeScan()"><option value="">-- PILIH FAKTUR --</option></select></div>
     </div>
-    <div class="input-row"><div class="label">KD TOKO</div><input type="text" id="p_kode" placeholder="Scan/Ketik..." onchange="processStoreInput()"></div>
-    <div class="input-row"><div class="label">NAMA TOKO</div><input type="text" id="p_nama" readonly></div>
-    <div class="input-row"><div class="label">URPICK</div><input type="text" id="p_urpick" readonly></div>
-    <div class="input-row"><div class="label">NO FAKTUR</div><select id="p_faktur" onchange="focusToNext()"><option value="">-- PILIH FAKTUR --</option></select></div>
 
-    <hr style="border: 1px solid #999; margin: 15px 0;">
+    <div id="group_scan" style="display:none;">
+        <hr style="border: 1px solid #999; margin: 15px 0;">
+        <div class="input-row" id="row_scan_label"><div class="label" style="background: var(--orange);">SCAN LABEL</div><input type="text" id="p_scan_label" placeholder="Scan Label..." onchange="validateScanLabel()"></div>
+        <div id="area_fisik" style="display:none; border: 2px solid var(--red); padding: 10px; border-radius: 5px; margin-bottom: 8px;">
+            <div class="input-row"><div class="label" style="background: var(--red);">SCAN FISIK</div><input type="text" id="p_scan_fisik" placeholder="Scan Barcode Produk..." onchange="validateScanFisik()"></div>
+        </div>
+        <div class="input-row"><div class="label">PLU</div><input type="text" id="p_plu" readonly></div>
+        <div class="input-row"><div class="label">DESCP</div><input type="text" id="p_descp" readonly></div>
+        <div class="input-row"><div class="label">ZONA</div><input type="text" id="p_zona" readonly></div>
+        <div class="input-row"><div class="label" style="background: #2c3e50;">QTY SCAN</div><input type="number" id="p_qty_input" placeholder="0" readonly></div>
+        <input type="hidden" id="p_qty_data">
 
-    <div class="input-row" id="row_scan_label"><div class="label" style="background: var(--orange);">SCAN LABEL</div><input type="text" id="p_scan_label" placeholder="Scan Label..." onchange="validateScanLabel()"></div>
-    <div id="area_fisik" style="display:none; border: 2px solid var(--red); padding: 10px; border-radius: 5px; margin-bottom: 8px;">
-        <div class="input-row"><div class="label" style="background: var(--red);">SCAN FISIK</div><input type="text" id="p_scan_fisik" placeholder="Scan Barcode Produk..." onchange="validateScanFisik()"></div>
+        <div class="footer">
+            <button class="btn-main" style="background:#2ecc71" onclick="saveData()">SIMPAN</button>
+            <button class="btn-main" style="background:#8e44ad" onclick="showReport()">FINAL</button>
+            <button class="btn-main" style="background:#34495e" onclick="kembaliKeHeader()">GANTI FAKTUR</button>
+            <button class="btn-main" style="background:#2c3e50; border: 1px solid yellow; color: yellow;" onclick="showMonitoring()">MONITOR</button>
+        </div>
     </div>
-    <div class="input-row"><div class="label">PLU</div><input type="text" id="p_plu" readonly></div>
-    <div class="input-row"><div class="label">DESCP</div><input type="text" id="p_descp" readonly></div>
-    <div class="input-row"><div class="label">ZONA</div><input type="text" id="p_zona" readonly></div>
-    <div class="input-row"><div class="label" style="background: #2c3e50;">QTY SCAN</div><input type="number" id="p_qty_input" placeholder="0" readonly></div>
-    <input type="hidden" id="p_qty_data">
 
-    <div class="footer">
-        <button class="btn-main" style="background:#2ecc71" onclick="saveData()">SIMPAN</button>
-        <button class="btn-main" style="background:#8e44ad" onclick="showReport()">FINAL</button>
-        <button class="btn-main" style="background:#34495e" onclick="clearAllFields()">CLEAR</button>
-        <button class="btn-main" style="background:#2c3e50; border: 1px solid yellow; color: yellow;" onclick="showMonitoring()">MONITOR</button>
-    </div>
     <div style="background: black; color: yellow; text-align: center; padding: 5px; font-size: 11px; margin-top: 5px; border-radius: 5px;">
         ANTRIAN BELUM FINAL: <span id="badge">0</span> ITEM
     </div>
@@ -1059,15 +1063,11 @@ function clearAllFieldsInternal() {
     }
 
     function clearAllFields() {
-    // 1. Reset Dropdown Jenis ke label default
-    const pJenis = document.getElementById('p_jenis');
-    if (pJenis) pJenis.value = ""; // Kembali ke ---PILIH JENIS---
-
-    // 2. Kosongkan Dropdown Faktur
+    // 1. Reset Dropdown Faktur (Paling Penting agar data lama hilang)
     const pFaktur = document.getElementById('p_faktur');
     if (pFaktur) pFaktur.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
 
-    // 3. Daftar ID kolom yang harus dikosongkan total
+    // 2. Daftar ID kolom yang harus dikosongkan total
     const idsToClear = [
         'p_kode', 'p_nama', 'p_urpick', 
         'p_scan_label', 'p_scan_fisik', 'p_plu', 
@@ -1079,22 +1079,24 @@ function clearAllFieldsInternal() {
         if (el) el.value = "";
     });
 
-    // 4. Reset tampilan khusus (Area Fisik & Qty Style)
+    // 3. Reset tampilan khusus Area Fisik
     const areaFisik = document.getElementById('area_fisik');
     if (areaFisik) areaFisik.style.display = 'none';
 
-    const qtyInp = document.getElementById('p_qty_input');
-    if (qtyInp) {
-        qtyInp.readOnly = true;
-        qtyInp.style.background = "#dcdcdc"; // Kembali ke warna abu-abu (disable)
+    // 4. LOGIKA PINDAH LAYAR KE HEADER
+    const gHeader = document.getElementById('group_header');
+    const gScan = document.getElementById('group_scan');
+    
+    if (gHeader && gScan) {
+        gHeader.style.display = 'block'; // Tampilkan input Toko
+        gScan.style.display = 'none';    // Sembunyikan area scan
     }
 
-    // 5. Fokus Kursos kembali ke posisi awal (Point 12)
-    console.log("Aplikasi direset, siap input baru.");
-    setFocus('p_tgl'); 
-    
-    // Opsional: Notifikasi singkat bahwa data telah dibersihkan
-    // notify("Layar dibersihkan", "success", "p_tgl");
+    // 5. Fokus Kursor langsung ke KD TOKO (Point Utama Kecepatan Kerja)
+    console.log("Ganti Faktur: Layar kembali ke Header.");
+    setTimeout(() => {
+        document.getElementById('p_kode').focus();
+    }, 200);
 }
 
 function showMonitoring() {
@@ -1280,7 +1282,6 @@ function renderMonitorTable(dataMap) {
     showReport(); 
 }
 
-    // Fungsi showReport yang hilang sudah ditambahkan di sini
     function showReport() {
     const tglRaw = document.getElementById('p_tgl').value;
     const kode = document.getElementById('p_kode').value.trim().toUpperCase();
@@ -1330,19 +1331,43 @@ function renderMonitorTable(dataMap) {
     let html = "";
     Object.keys(reportMap).forEach(key => {
         const r = reportMap[key];
-        const status = (r.target === "N/A" || r.scan === r.target) ? "DONE" : (r.scan < r.target ? "PENDING" : "OVER");
         
-        // PERBAIKAN DI SINI: Jika ada satu saja yang PENDING atau OVER, isAllMatch jadi false
-        if (status !== "DONE") isAllMatch = false; 
+        // AMBIL DATA DARI LOCALSTORAGE UNTUK CEK APAKAH SUDAH ADA KETERANGAN PAKSA FINAL
+        // Kita cari apakah ada item di aktualData yang punya keterangan untuk PLU/Key ini
+        const itemPunyaKet = aktualData.find(i => 
+            (i.plu === key || i.barcode && i.barcode.includes(key) || (key.includes(' | ') && i.plu === key.split(' | ')[1]))
+            && i.keterangan && i.keterangan !== ""
+        );
+
+        let status;
+        if (r.target === "N/A" || r.scan === r.target) {
+            status = "DONE";
+        } else if (itemPunyaKet) {
+            status = "SELISIH"; // Status khusus untuk yang sudah di-OTP & diberi keterangan
+        } else {
+            status = (r.scan < r.target ? "PENDING" : "OVER");
+        }
         
-        const colorBg = status === 'DONE' ? '#d4edda' : (status === 'PENDING' ? '#f8d7da' : '#fff3cd');
+        // Logika Tombol Finalisasi: Jika DONE atau SELISIH, maka dianggap valid untuk kirim
+        if (status !== "DONE" && status !== "SELISIH") isAllMatch = false; 
+        
+        // Penentuan Warna: Tambahkan warna Orange untuk yang SELISIH (Sudah di-OTP)
+        const colorBg = status === 'DONE' ? '#d4edda' : 
+                        (status === 'SELISIH' ? '#ffcc80' : // Warna Orange muda
+                        (status === 'PENDING' ? '#f8d7da' : '#fff3cd'));
+
         const displayDesc = (jenis === "KONTAINER" || !r.desc) ? "" : `<br><small>${r.desc}</small>`;
+        const ketTampil = itemPunyaKet ? `<br><i style="font-size:9px; color:brown;">Ket: ${itemPunyaKet.keterangan}</i>` : "";
 
         html += `<tr style="background:${colorBg}">
-            <td style="text-align:left; padding:5px;"><b>${key}</b>${displayDesc}</td>
+            <td style="text-align:left; padding:5px;"><b>${key}</b>${displayDesc}${ketTampil}</td>
             <td>${r.target}</td>
             <td>${r.scan}</td>
-            <td><b>${status}</b><br><button onclick="revisiQty('${key}', '${key.includes(' | ') ? key.split(' | ')[1] : key}')" style="font-size:10px; background:#f39c12; color:white; border:none; border-radius:3px; padding:3px 8px;">REVISI</button></td></tr>`;
+            <td>
+                <b>${status}</b><br>
+                <button onclick="editItemAntrian('${key}')" style="font-size:10px; background:#f39c12; color:white; border:none; border-radius:3px; padding:3px 8px;">REVISI</button>
+            </td>
+        </tr>`;
     });
 
     document.getElementById('report_info').innerHTML = `<b>${jenis}</b> | ${kode} | ${faktur}`;
@@ -1358,9 +1383,24 @@ function renderMonitorTable(dataMap) {
 function processStoreInput() {
     const kodeInput = document.getElementById('p_kode');
     if (kodeInput && kodeInput.value.trim() !== "") {
-        kodeInput.value = kodeInput.value.toUpperCase().trim();
-        
-        // Jalankan filter
+        // --- AWAL TAMBAHAN: LOGIKA EKSTRAKSI BARCODE LABEL ---
+        let rawVal = kodeInput.value.trim().toUpperCase();
+        const parts = rawVal.split('-').filter(Boolean);
+
+        if (parts.length > 1) {
+            // Jika discan dari Label KONTAINER (Contoh: A0001-R665) -> Ambil R665
+            if (rawVal.includes("KONTAINER") || parts.length === 2) {
+                rawVal = parts[1];
+            } 
+            // Jika discan dari Label DOS (Contoh: DOS-C5-R665-432296) -> Ambil R665
+            else if (rawVal.includes("DOS") || parts.length >= 4) {
+                rawVal = parts[2];
+            }
+        }
+        kodeInput.value = rawVal; // Masukkan hasil ekstraksi kembali ke kolom
+        // --- AKHIR TAMBAHAN ---
+
+        // Jalankan filter (Struktur asli tetap di bawah)
         const found = runFilter(); 
 
         if (found) {
@@ -1526,6 +1566,196 @@ function playError() {
 
     oscillator.start();
     oscillator.stop(audioCtx.currentTime + 0.5); // Bunyi selama 0.5 detik
+}
+
+async function editItemAntrian(key) {
+    // SEMBUNYIKAN MODAL REPORT TERLEBIH DAHULU
+    document.getElementById('modal_report').style.display = 'none';
+
+    // 1. Tanyakan Opsi Revisi
+    const { value: opsi } = await Swal.fire({
+        title: 'OPSI REVISI',
+        text: `Pilih tindakan untuk item ${key}`,
+        icon: 'question',
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: 'REVISI QTY',
+        denyButtonText: 'FINAL SELISIH',
+        cancelButtonText: 'BATAL',
+        confirmButtonColor: '#3085d6',
+        denyButtonColor: '#f39c12',
+        allowOutsideClick: false // Mencegah klik luar agar modal report tidak "nyangkut"
+    });
+
+    // JIKA USER TEKAN BATAL / CANCEL
+    if (opsi === undefined) {
+        document.getElementById('modal_report').style.display = 'block';
+        return;
+    }
+
+    // --- CABANG A: REVISI QTY ---
+    if (opsi === true) { 
+        const { value: otp } = await Swal.fire({
+            title: 'VERIFIKASI OTP',
+            input: 'password',
+            inputPlaceholder: 'Masukkan OTP Supervisor',
+            showCancelButton: true
+        });
+
+        if (otp === "1234") { 
+            const { value: qtyBaru } = await Swal.fire({
+                title: 'INPUT QTY BARU',
+                input: 'number',
+                inputAttributes: { min: 0 },
+                showCancelButton: true
+            });
+
+            if (qtyBaru !== undefined) {
+                updateQtyLokal(key, parseInt(qtyBaru), "");
+                await Swal.fire('Berhasil', 'Qty telah diperbarui', 'success');
+            }
+        } else if (otp) {
+            await Swal.fire('Gagal', 'OTP Salah!', 'error');
+        }
+    } 
+
+    // --- CABANG B: FINAL SELISIH (PAKSA FINAL) ---
+    else if (opsi === false) { 
+        const { value: formValues } = await Swal.fire({
+            title: 'FINAL SELISIH',
+            html:
+                '<input id="swal-otp" class="swal2-input" placeholder="OTP Supervisor" type="password">' +
+                '<textarea id="swal-ket" class="swal2-textarea" placeholder="Keterangan Wajib (Pecah/Hilang/dll)"></textarea>',
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'OK PAKSA FINAL',
+            preConfirm: () => {
+                const otp = document.getElementById('swal-otp').value;
+                const ket = document.getElementById('swal-ket').value;
+                if (!otp || !ket) {
+                    Swal.showValidationMessage('OTP dan Keterangan WAJIB diisi!');
+                }
+                return { otp: otp, ket: ket };
+            }
+        });
+
+        if (formValues) {
+            if (formValues.otp === "1234") {
+                updateQtyLokal(key, null, formValues.ket);
+                await Swal.fire('Tersimpan', 'Status: Paksa Final (Selisih)', 'warning');
+            } else {
+                await Swal.fire('Gagal', 'OTP Salah!', 'error');
+            }
+        }
+    }
+
+       showReport(); 
+}
+
+function updateQtyLokal(key, qtyBaru, keterangan) {
+    let antrian = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+    antrian.forEach(item => {
+        if (item.plu === key || item.barcode === key || item.kontainer === key) {
+            if (qtyBaru !== null) item.qty_scan = qtyBaru;
+            if (keterangan) item.keterangan = keterangan;
+        }
+    });
+    localStorage.setItem('q_polcek', JSON.stringify(antrian));
+}
+
+function handleScanToko(val) {
+    if (!val) return;
+
+    // Pecah barcode berdasarkan tanda strip '-'
+    const parts = val.split('-').filter(Boolean);
+    let hasilKode = val.toUpperCase().trim();
+
+    // 1. Logika Ekstraksi Kode Toko
+    if (parts.length > 1) {
+        if (val.toUpperCase().includes("KONTAINER") || parts.length === 2) {
+            // Contoh: A0001-R665 -> Toko di parts[1]
+            hasilKode = parts[1].toUpperCase();
+        } 
+        else if (val.toUpperCase().includes("DOS") || parts.length >= 4) {
+            // Contoh: DOS-C5-R665-432296 -> Toko di parts[2]
+            hasilKode = parts[2].toUpperCase();
+        }
+    }
+
+    // 2. Masukkan hasil ke input KD STORE
+    document.getElementById('p_kode').value = hasilKode;
+
+    // 3. Jalankan filter toko (agar list faktur terisi)
+    if (typeof filterToko === "function") {
+        filterToko(); 
+    }
+
+    // 4. PINDAHKAN FOKUS KE NO FAKTUR
+    // Gunakan setTimeout sedikit agar browser sempat merender list faktur terlebih dahulu
+    setTimeout(() => {
+        const elFaktur = document.getElementById('p_faktur');
+        if (elFaktur) {
+            elFaktur.focus();
+            // Jika p_faktur adalah dropdown/select, kita bisa memicu pembukaan list
+            console.log("Fokus pindah ke No Faktur");
+        }
+    }, 300);
+}
+
+
+// Fungsi untuk menampilkan Area Scan dan menyembunyikan Header
+function toggleAreaScan() {
+    const tgl = document.getElementById('p_tgl').value;
+    const kode = document.getElementById('p_kode').value;
+    const faktur = document.getElementById('p_faktur').value;
+
+    // Jika ketiga data utama sudah terisi
+    if (tgl && kode && faktur) {
+        document.getElementById('section_header').style.display = 'none'; // Sembunyikan Atas
+        document.getElementById('section_scan').style.display = 'block'; // Tampilkan Bawah
+        
+        // Langsung fokuskan ke tempat scan label agar user tidak klik lagi
+        setTimeout(() => {
+            document.getElementById('p_scan_label').focus();
+        }, 300);
+    }
+}
+
+// Fungsi untuk kembali ke layar utama (setelah final atau klik tombol kembali)
+function backToHeader() {
+    document.getElementById('section_header').style.display = 'block'; // Tampilkan Atas
+    document.getElementById('section_scan').style.display = 'none';   // Sembunyikan Bawah
+    
+    // Reset input agar bersih untuk input toko baru
+    document.getElementById('p_kode').value = "";
+    document.getElementById('p_nama').value = "";
+    document.getElementById('p_faktur').innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
+}
+
+function toggleKeScan() {
+    const faktur = document.getElementById('p_faktur').value;
+    if (faktur !== "") {
+        // Sembunyikan Header, Tampilkan Area Scan
+        document.getElementById('group_header').style.display = 'none';
+        document.getElementById('group_scan').style.display = 'block';
+        
+        // Langsung fokus ke Scan Label agar petugas tidak klik layar lagi
+        setTimeout(() => {
+            document.getElementById('p_scan_label').focus();
+        }, 200);
+    }
+}
+
+function kembaliKeHeader() {
+    // Tampilkan kembali Header untuk ganti Toko/Faktur
+    document.getElementById('group_header').style.display = 'block';
+    document.getElementById('group_scan').style.display = 'none';
+}
+
+// Pastikan saat Clear data atau setelah Final, tampilan kembali ke Header
+function resetTampilanLayar() {
+    document.getElementById('group_header').style.display = 'block';
+    document.getElementById('group_scan').style.display = 'none';
 }
 
 </script>
