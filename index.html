@@ -188,6 +188,7 @@
             <option value="DOS">DOS</option>
             <option value="MANUAL">MANUAL</option>
             <option value="TAG I">TAG I</option>
+            <option value="NON-LOKASI">NON-LOKASI</option>
             <option value="TELUR">TELUR</option>
             <option value="MKT">MKT</option>
             <option value="ATK GS">ATK GS</option>
@@ -741,7 +742,7 @@ async function saveData() {
     
     if (!qtyInp.value || qtyInp.value <= 0) return notify("Isi Qty!", "error", "p_qty_input");
 
-    const kelompokNonScan = ["TELUR", "MKT", "ATK GS", "MATERAI"];
+    const kelompokNonScan = ["NON-LOKASI","TELUR", "MKT", "ATK GS", "MATERAI"];
 
     // Jika masuk kelompok NON-SCAN, langsung kirim ke server (Point 9)
     if (kelompokNonScan.includes(jenis)) {
@@ -812,7 +813,7 @@ async function kirimDataLangsung(data) {
 }
 
 function afterSaveFocus(jenis) {
-    const kelompokNonScan = ["TELUR", "MKT", "ATK GS", "MATERAI"];
+    const kelompokNonScan = ["NON-LOKASI","TELUR", "MKT", "ATK GS", "MATERAI"];
 
     // 1. Reset field input (Point 9)
     ['p_scan_label','p_scan_fisik','p_plu','p_descp','p_zona','p_qty_input','p_qty_data'].forEach(id => {
