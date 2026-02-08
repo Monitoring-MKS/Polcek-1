@@ -1172,7 +1172,7 @@ function renderMonitorTable(dataMap) {
         let html = "";
         Object.keys(reportMap).forEach(key => {
             const r = reportMap[key];
-            const status = (r.target === "N/A" || r.scan === r.target) ? "MATCH" : (r.scan < r.target ? "PENDING" : "OVER");
+            const status = (r.target === "N/A" || r.scan === r.target) ? "DONE" : (r.scan < r.target ? "PENDING" : "OVER");
             if (status !== "MATCH") isAllMatch = false;
             
             // Format tampilan baris: Jika kontainer, jangan tampilkan baris deskripsi kecil di bawah judul key
