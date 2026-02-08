@@ -268,6 +268,34 @@
 </div>
 
 <script>
+history.pushState(null, null, location.href);
+window.onpopstate = function() {
+    const isLoggedIn = localStorage.getItem("isLoggedIn");
+    if (isLoggedIn === "true") {
+        // Jika user tekan Back saat login, paksa tetap di halaman ini
+        history.pushState(null, null, location.href);
+        // Tampilkan peringatan kecil (Toast)
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top',
+            showConfirmButton: false,
+            timer: 2000
+        });
+        Toast.fire({
+            icon: 'warning',
+            title: 'Gunakan tombol LOGOUT untuk keluar'
+        });
+    }
+};
+
+// 2. Mencegah browser ditutup atau di-reload tanpa sengaja
+window.onbeforeunload = function(e) {
+    if (localStorage.getItem("isLoggedIn") === "true") {
+        e.preventDefault();
+        e.returnValue = ''; // Munculkan dialog konfirmasi browser
+    }
+};
+
 const G_URL = "https://script.google.com/macros/s/AKfycbxy1ZIh1A6RTrBjNpyFu10rVHTh6OXaDjJ02PUoGap-Aok3qNaIeEvWbsKSENuT7Wc/exec";
     var dbPickAuto = [], dbMasterBarcode = [], dbManual = [], dbSudahPolcek = [];
 var currentUser = "";
@@ -354,7 +382,15 @@ var CACHED_DATA = null;
 ];
 
     async function initApp() {
-    const loader = document.getElementById('loader');
+const isLoggedIn = localStorage.getItem("isLoggedIn");
+    if (isLoggedIn === "true") {
+        currentUser = localStorage.getItem("loggedUser");
+        document.getElementById('display_user').innerText = currentUser;
+        document.getElementById('login_screen').style.display = 'none';
+        document.getElementById('main_app').style.display = 'block';
+    }  
+
+  const loader = document.getElementById('loader');
     if (loader) loader.style.display = 'flex';
 
     try {
@@ -448,31 +484,21 @@ function doLogin() {
     const user = usersDB.find(u => u.nik === nik && u.pass === pass);
     
     if (user) {
-        currentUser = user.nama; 
-        document.getElementById('display_user').innerText = currentUser;
+        // Simpan status login permanen di memori HP
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("loggedUser", user.nama);
+        
+        // Pindah layar
         document.getElementById('login_screen').style.display = 'none';
         document.getElementById('main_app').style.display = 'block';
+        document.getElementById('display_user').innerText = user.nama;
         
-        // Jalankan initApp untuk menarik data terbaru dari server
+        // Aktifkan cegah tombol back
+        history.pushState(null, null, location.href);
+        
         initApp(); 
-    } else { 
-        // FIX: Menambahkan properti khusus agar pop-up melompat keluar dari layar login
-        Swal.fire({
-            title: "Gagal",
-            text: "Kombinasi NIK dan Password Salah",
-            icon: "error",
-            target: document.body, // Memastikan pop-up menempel di body, bukan di div login
-            heightAuto: false,
-            allowOutsideClick: false,
-            confirmButtonColor: '#d33',
-            customClass: {
-                container: 'my-swal-z-index' // Kita beri kelas khusus
-            }
-        }); 
-        
-        // Bersihkan input password agar user bisa langsung coba lagi
-        document.getElementById('l_pass').value = "";
-        document.getElementById('l_nik').focus();
+    } else {
+        Swal.fire({ title: "Gagal", text: "Kombinasi NIK dan Password Salah", icon: "error" });
     }
 }
 document.getElementById('l_pass').addEventListener('keypress', function (e) {
@@ -483,22 +509,26 @@ document.getElementById('l_pass').addEventListener('keypress', function (e) {
 
     function doLogout() {
     Swal.fire({
-        title: 'Logout?',
-        text: "Data Master akan dihapus dari HP ini.",
-        icon: 'warning',
+        title: "Logout?",
+        text: "Anda akan keluar dari sesi kerja ini.",
+        icon: "warning",
         showCancelButton: true,
-        confirmButtonText: 'Ya, Logout'
+        confirmButtonColor: "#d33",
+        confirmButtonText: "Ya, Keluar"
     }).then((result) => {
         if (result.isConfirmed) {
-            // Hapus data sesuai aturan Tahap 3
-            localStorage.removeItem("db_pick_auto");
-            localStorage.removeItem("db_master_barcode");
-            localStorage.removeItem("db_manual");
-            localStorage.removeItem("db_sudah_polcek");
+            // Hapus semua kunci login
+            localStorage.removeItem("isLoggedIn");
+            localStorage.removeItem("loggedUser");
             
-            currentUser = "";
-            document.getElementById('login_screen').style.display = 'flex';
+            // Kembalikan tampilan
             document.getElementById('main_app').style.display = 'none';
+            document.getElementById('login_screen').style.display = 'block';
+            
+            // Opsional: Bersihkan form login
+            document.getElementById('l_nik').value = "";
+            document.getElementById('l_pass').value = "";
+            document.getElementById('l_nama').value = "";
         }
     });
 }
@@ -1341,6 +1371,12 @@ async function processResetPassword() {
         document.getElementById('loader').style.display = 'none';
     }
 }
+
+window.onbeforeunload = function() {
+    if (localStorage.getItem("isLoggedIn") === "true") {
+        return "Proses Polcek sedang berjalan. Anda yakin ingin menutup halaman?";
+    }
+};
 
 </script>
 </body>
