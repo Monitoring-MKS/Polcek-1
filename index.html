@@ -6,6 +6,29 @@
     <title>POLCEK WH - MAKASSAR</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+
+/* Membuat area badge menempel di bawah layar */
+.sticky-badge {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #000; /* Hitam */
+    color: #ff0; /* Kuning */
+    text-align: center;
+    padding: 15px 0;
+    font-weight: bold;
+    font-size: 14px;
+    border-top: 2px dashed #ff0;
+    z-index: 9999; /* Pastikan paling depan */
+    cursor: pointer;
+}
+
+/* Beri jarak bawah pada main_app supaya konten paling bawah tidak tertutup badge */
+#main_app {
+    padding-bottom: 70px; 
+}
+
         /* Tombol Close Pojok Kanan Atas */
         .btn-close-modal {
             position: absolute;
@@ -117,6 +140,22 @@
     z-index: 99999 !important; /* Angka tertinggi agar tidak tertutup apapun */
 }
 
+/* Tambahkan di bagian <style> */
+.antrian-footer {
+    position: sticky;
+    bottom: 0;
+    background: black;
+    color: yellow;
+    text-align: center;
+    padding: 10px;
+    font-size: 11px;
+    margin-top: 10px;
+    border-radius: 5px 5px 0 0;
+    cursor: pointer;
+    border: 1px dashed yellow;
+    z-index: 100;
+}
+
 
 </style>
 
@@ -156,6 +195,29 @@
   <p style="margin-top:15px; font-size:14px; font-weight:bold; color:#ffffff;">
     Update data master, mohon tunggu...
   </p>
+</div>
+
+<div id="modal_antrian" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:20000; overflow-y:auto; padding:10px;">
+    <div style="background:white; border-radius:10px; padding:15px; min-height:100%; position: relative;">
+        <button class="btn-close-modal" onclick="document.getElementById('modal_antrian').style.display='none'">×</button>
+        <h3 style="text-align:center; margin-top:0; color: #2c3e50;">ANTRIAN BELUM FINAL</h3>
+        <hr>
+        <div style="overflow-x:auto;">
+            <table border="1" style="width:100%; border-collapse:collapse; font-size:10px; text-align:center;">
+                <thead style="background:#eee;">
+                    <tr>
+                        <th>URPICK</th>
+                        <th>TOKO</th>
+                        <th>KONT / DOS / MN</th>
+                        <th>ACTION</th>
+                    </tr>
+                </thead>
+                <tbody id="antrian_body">
+                    </tbody>
+            </table>
+        </div>
+        <button class="btn-main" style="background:#34495e; width: 100%; margin-top: 20px;" onclick="document.getElementById('modal_antrian').style.display='none'">TUTUP</button>
+    </div>
 </div>
 
 <div id="login_screen">
@@ -206,6 +268,7 @@
         <hr style="border: 1px solid #999; margin: 15px 0;">
         <div class="input-row" id="row_scan_label"><div class="label" style="background: var(--orange);">SCAN LABEL</div><input type="text" id="p_scan_label" placeholder="Scan Label..." onchange="validateScanLabel()"></div>
         <div id="area_fisik" style="display:none; border: 2px solid var(--red); padding: 10px; border-radius: 5px; margin-bottom: 8px;">
+
             <div class="input-row"><div class="label" style="background: var(--red);">SCAN FISIK</div><input type="text" id="p_scan_fisik" placeholder="Scan Barcode Produk..." onchange="validateScanFisik()"></div>
         </div>
         <div class="input-row"><div class="label">PLU</div><input type="text" id="p_plu" readonly></div>
@@ -214,17 +277,18 @@
         <div class="input-row"><div class="label" style="background: #2c3e50;">QTY SCAN</div><input type="number" id="p_qty_input" placeholder="0" readonly></div>
         <input type="hidden" id="p_qty_data">
 
-        <div class="footer">
+<div class="footer">
             <button class="btn-main" style="background:#2ecc71" onclick="saveData()">SIMPAN</button>
             <button class="btn-main" style="background:#8e44ad" onclick="showReport()">FINAL</button>
-            <button class="btn-main" style="background:#34495e" onclick="kembaliKeHeader()">GANTI FAKTUR</button>
+            <button class="btn-main" style="background:#34495e" onclick="kembaliKeHeader()">HEADER</button>
+            <button class="btn-main" style="background:#34495e" onclick="clearAllFields()">CLEAR</button>
             <button class="btn-main" style="background:#2c3e50; border: 1px solid yellow; color: yellow;" onclick="showMonitoring()">MONITOR</button>
-        </div>
+            </div>
+<div onclick="showAntrianModal()" class="antrian-footer">
+    📦 KLIK LIHAT ANTRIAN: <span id="badge" style="font-weight:bold; font-size:14px;">0</span> ITEM
+</div>
     </div>
-
-    <div style="background: black; color: yellow; text-align: center; padding: 5px; font-size: 11px; margin-top: 5px; border-radius: 5px;">
-        ANTRIAN BELUM FINAL: <span id="badge">0</span> ITEM
-    </div>
+        
 </div> 
 
 <div id="modal_report" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:20000; overflow-y:auto; padding:10px;">
@@ -301,7 +365,7 @@ window.onbeforeunload = function(e) {
     }
 };
 
-const G_URL = "https://script.google.com/macros/s/AKfycbxy1ZIh1A6RTrBjNpyFu10rVHTh6OXaDjJ02PUoGap-Aok3qNaIeEvWbsKSENuT7Wc/exec";
+const G_URL = "https://script.google.com/macros/s/AKfycbwKQHLb5lg3ebUaADolOQb9N8amhNqefAq2vmQkkh52rK3DNDhMbBSjDXWCJIV4sWU/exec";
     var dbPickAuto = [], dbMasterBarcode = [], dbManual = [], dbSudahPolcek = [];
 var currentUser = "";
 var CACHED_DATA = null;
@@ -388,13 +452,14 @@ var CACHED_DATA = null;
 
     async function initApp() {
 const isLoggedIn = localStorage.getItem("isLoggedIn");
-    if (isLoggedIn === "true") {
+    
+if (isLoggedIn === "true") {
         currentUser = localStorage.getItem("loggedUser");
         document.getElementById('display_user').innerText = currentUser;
         document.getElementById('login_screen').style.display = 'none';
         document.getElementById('main_app').style.display = 'block';
     }  
-
+updateBadge();
   const loader = document.getElementById('loader');
     if (loader) loader.style.display = 'flex';
 
@@ -489,29 +554,34 @@ function doLogin() {
     const user = usersDB.find(u => u.nik === nik && u.pass === pass);
     
     if (user) {
-aktifkanFullScreen();
-        // Simpan status login permanen di memori HP
+        aktifkanFullScreen();
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("loggedUser", user.nama);
         
-        // Pindah layar
         document.getElementById('login_screen').style.display = 'none';
         document.getElementById('main_app').style.display = 'block';
         document.getElementById('display_user').innerText = user.nama;
         
-        // Aktifkan cegah tombol back
         history.pushState(null, null, location.href);
-        
         initApp(); 
     } else {
-        Swal.fire({ title: "Gagal", text: "Kombinasi NIK dan Password Salah", icon: "error" });
+        // --- UPDATE DI SINI ---
+        // Pastikan loader ditutup jika user salah input agar tidak menghalangi modal error
+        const loader = document.getElementById('loader');
+        if (loader) loader.style.display = 'none';
+
+        Swal.fire({ 
+            title: "Gagal", 
+            text: "Kombinasi NIK dan Password Salah", 
+            icon: "error",
+            confirmButtonColor: '#c0392b',
+            // Memaksa z-index di tingkat script (opsional tapi ampuh)
+            didOpen: () => {
+                Swal.getContainer().style.zIndex = "100000";
+            }
+        });
     }
 }
-document.getElementById('l_pass').addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') {
-        doLogin();
-    }
-});
 
 function aktifkanFullScreen() {
     let doc = window.document;
@@ -628,7 +698,15 @@ function aktifkanFullScreen() {
 }
 
 function validateScanLabel() {
-    const scanVal = document.getElementById('p_scan_label').value.trim();
+    // Ambil nilai asli
+    let rawScanVal = document.getElementById('p_scan_label').value;
+    
+    // BERSIHKAN SPASI: Menghapus spasi di awal, akhir, dan di TENGAH (misal: "A- B" jadi "A-B")
+    const scanVal = rawScanVal.replace(/\s+/g, '').toUpperCase().trim();
+    
+    // Update tampilan input agar user melihat data yang sudah bersih
+    document.getElementById('p_scan_label').value = scanVal;
+
     const jenisVal = document.getElementById('p_jenis').value;
     const fakturVal = document.getElementById('p_faktur').value;
     const tglPilih = document.getElementById('p_tgl').value;
@@ -645,9 +723,10 @@ function validateScanLabel() {
         return Swal.fire({ icon: 'error', title: 'Akses Ditolak', text: `Toko ${kodeToko} sudah Final.` });
     }
 
+    // Split parts menggunakan data yang sudah bersih dari spasi
     const parts = scanVal.split('-').filter(Boolean);
 
-if (jenisVal === "KONTAINER") {
+    if (jenisVal === "KONTAINER") {
         // parts[0] = A0001 (No Kontainer)
         // parts[1] = R665  (Kode Toko dari Label)
         const noKontainerLabel = parts[0] ? parts[0].toUpperCase() : "";
@@ -684,38 +763,28 @@ if (jenisVal === "KONTAINER") {
             document.getElementById('p_qty_input').value = 1; 
             document.getElementById('p_qty_input').readOnly = false;
             
-            // Simpan barcode lengkap ke hidden input jika ada
             const elBarcode = document.getElementById('p_barcode');
-            if (elBarcode) elBarcode.value = scanVal.toUpperCase(); 
+            if (elBarcode) elBarcode.value = scanVal; 
 
             // --- LOGIKA AUTO SAVE ---
-            // Jeda 300ms untuk memastikan data terisi di field, lalu panggil saveData
             setTimeout(() => {
                 saveData(); 
-                // Bersihkan input scan setelah save agar bisa langsung scan koli berikutnya
                 document.getElementById('p_scan_label').value = "";
                 document.getElementById('p_scan_label').focus();
             }, 300);
-            // -------------------------
-
         } else { 
             if (typeof playError === "function") playError();
             notify("⚠️ NO KONTAINER TIDAK ADA DI DATA!", "error", "p_scan_label"); 
             document.getElementById('p_scan_label').value = ""; 
         }
-    
-    
-} else if (jenisVal === "DOS" || jenisVal === "MANUAL") {
-        // --- LOGIKA UNTUK DOS ---
+
+    } else if (jenisVal === "DOS" || jenisVal === "MANUAL") {
         if (jenisVal === "DOS") {
-            // Format Label DOS: DOS-C5-R665-432296
-            // parts[2] = Kode Toko (R665), parts[3] = PLU (432296)
             const tokoLabel = parts[2] ? parts[2].toUpperCase() : "";
             const pluLabel = parts[3];
 
-            // 1. Kuncian Toko (Harus sama dengan toko yang dipilih aktif)
             if (tokoLabel !== kodeToko) {
-                if (typeof playError === "function") playError(); // Bunyi Suara Error
+                if (typeof playError === "function") playError(); 
                 document.getElementById('p_scan_label').value = "";
                 return Swal.fire({
                     icon: 'error',
@@ -724,7 +793,6 @@ if (jenisVal === "KONTAINER") {
                 });
             }
 
-            // 2. Kuncian Master Picking (Cek PLU di Faktur & Tgl tersebut)
             const match = dbPickAuto.find(i => 
                 i.faktur === fakturVal && 
                 i.kodeToko === kodeToko && 
@@ -733,11 +801,9 @@ if (jenisVal === "KONTAINER") {
 
             if (match) {
                 fillData(match);
-                // KUNCI QTY: User tidak boleh ketik Qty, harus scan fisik
                 document.getElementById('p_qty_input').value = ""; 
                 document.getElementById('p_qty_input').readOnly = true; 
                 document.getElementById('p_qty_input').style.background = "#eeeeee";
-
                 document.getElementById('area_fisik').style.display = 'block';
                 setTimeout(() => { document.getElementById('p_scan_fisik').focus(); }, 300);
             } else {
@@ -746,17 +812,12 @@ if (jenisVal === "KONTAINER") {
                 document.getElementById('p_scan_label').value = "";
             }
 
-        // --- LOGIKA UNTUK MANUAL ---
-} else if (jenisVal === "MANUAL") {
-            // Format Label Manual: RZ01-TB26000768-113222
-            // Kita gabungkan parts[0] dan parts[1] untuk mendapatkan No Faktur utuh
-            const prefixFaktur = parts[0] ? parts[0].toUpperCase() : ""; // RZ01
-            const nomorFaktur  = parts[1] ? parts[1].toUpperCase() : ""; // TB26000768
-            const fakturLabel  = `${prefixFaktur}-${nomorFaktur}`;       // Menjadi RZ01-TB26000768
-            
-            const pluLabel = parts[2]; // 113222
+        } else if (jenisVal === "MANUAL") {
+            const prefixFaktur = parts[0] ? parts[0].toUpperCase() : ""; 
+            const nomorFaktur  = parts[1] ? parts[1].toUpperCase() : ""; 
+            const fakturLabel  = `${prefixFaktur}-${nomorFaktur}`; 
+            const pluLabel = parts[2]; 
 
-            // 1. Kuncian No Faktur (Memastikan RZ01-TB26000768 sesuai dengan input aktif)
             if (fakturLabel !== fakturVal.toUpperCase()) {
                 if (typeof playError === "function") playError();
                 document.getElementById('p_scan_label').value = "";
@@ -767,7 +828,6 @@ if (jenisVal === "KONTAINER") {
                 });
             }
 
-            // 2. Kuncian Sheet MANUAL (Cek PLU di dalam Faktur tersebut)
             const match = dbManual.find(i => 
                 i.faktur === fakturVal && 
                 String(i.plu) === String(pluLabel)
@@ -775,11 +835,9 @@ if (jenisVal === "KONTAINER") {
 
             if (match) {
                 fillData(match);
-                // KUNCI QTY: User dipaksa scan fisik (step 2)
                 document.getElementById('p_qty_input').value = "";
                 document.getElementById('p_qty_input').readOnly = true;
                 document.getElementById('p_qty_input').style.background = "#eeeeee";
-
                 document.getElementById('area_fisik').style.display = 'block';
                 setTimeout(() => { 
                     document.getElementById('p_scan_fisik').value = "";
@@ -792,14 +850,14 @@ if (jenisVal === "KONTAINER") {
             }
         }
 
-        } else if (jenisVal === "TAG I") {
-            document.getElementById('p_plu').value = "TAG-I";
-            document.getElementById('p_descp').value = "RECORD SCAN TAG I";
-            document.getElementById('p_qty_input').readOnly = false;
-            document.getElementById('p_qty_input').style.background = "white";
-            setFocus('p_qty_input');
-        }
+    } else if (jenisVal === "TAG I") {
+        document.getElementById('p_plu').value = "TAG-I";
+        document.getElementById('p_descp').value = "RECORD SCAN TAG I";
+        document.getElementById('p_qty_input').readOnly = false;
+        document.getElementById('p_qty_input').style.background = "white";
+        setFocus('p_qty_input');
     }
+}
 
 function validateScanFisik() {
     const scanFisik = document.getElementById('p_scan_fisik').value.trim();
@@ -855,6 +913,7 @@ function validateScanFisik() {
     }
 
 async function saveData() {
+
     const qtyInp = document.getElementById('p_qty_input');
     const jenis = document.getElementById('p_jenis').value;
     const kodeToko = document.getElementById('p_kode').value.toUpperCase();
@@ -863,7 +922,7 @@ async function saveData() {
     if (!qtyInp.value || qtyInp.value <= 0) return notify("Isi Qty!", "error", "p_qty_input");
 
     const kelompokNonScan = ["NON-LOKASI","TELUR", "MKT", "ATK GS", "MATERAI"];
-
+   updateBadge(); 
     // Jika masuk kelompok NON-SCAN, langsung kirim ke server (Point 9)
     if (kelompokNonScan.includes(jenis)) {
         const dataLangsung = [{
@@ -1037,17 +1096,17 @@ function clearAllFieldsInternal() {
         Swal.fire({ title: msg, icon: type, timer: 1500, showConfirmButton: false, didClose: () => { setFocus(nextId); }});
     }
 
-    function updateBadge() { 
-        const badge = document.getElementById('badge');
-        if(badge) badge.innerText = JSON.parse(localStorage.getItem('q_polcek') || "[]").length; 
+    function updateBadge() {
+    try {
+        const scanDB = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+        const badgeEl = document.getElementById('badge');
+        if (badgeEl) {
+            badgeEl.innerText = scanDB.length;
+        }
+    } catch (e) {
+        console.error("Gagal update badge", e);
     }
-
-    function resetScanField() {
-        ['p_scan_label','p_scan_fisik','p_plu','p_descp','p_zona','p_qty_input','p_qty_data'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; });
-        document.getElementById('area_fisik').style.display = 'none';
-        const qtyInp = document.getElementById('p_qty_input');
-        qtyInp.readOnly = true; qtyInp.style.background = "#dcdcdc";
-    }
+}
 
     function focusToNext() {
         resetScanField();
@@ -1063,40 +1122,41 @@ function clearAllFieldsInternal() {
     }
 
     function clearAllFields() {
-    // 1. Reset Dropdown Faktur (Paling Penting agar data lama hilang)
-    const pFaktur = document.getElementById('p_faktur');
-    if (pFaktur) pFaktur.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
-
-    // 2. Daftar ID kolom yang harus dikosongkan total
+    // 1. Kosongkan semua ID input
     const idsToClear = [
         'p_kode', 'p_nama', 'p_urpick', 
         'p_scan_label', 'p_scan_fisik', 'p_plu', 
         'p_descp', 'p_zona', 'p_qty_input', 'p_qty_data'
     ];
 
+    updateBadge();
     idsToClear.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = "";
     });
 
-    // 3. Reset tampilan khusus Area Fisik
+    // 2. Reset Pilihan Dropdown
+    const pJenis = document.getElementById('p_jenis');
+    if (pJenis) pJenis.value = ""; 
+
+    const pFaktur = document.getElementById('p_faktur');
+    if (pFaktur) pFaktur.innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
+
+    // 3. Sembunyikan Area Fisik
     const areaFisik = document.getElementById('area_fisik');
     if (areaFisik) areaFisik.style.display = 'none';
 
-    // 4. LOGIKA PINDAH LAYAR KE HEADER
-    const gHeader = document.getElementById('group_header');
-    const gScan = document.getElementById('group_scan');
-    
-    if (gHeader && gScan) {
-        gHeader.style.display = 'block'; // Tampilkan input Toko
-        gScan.style.display = 'none';    // Sembunyikan area scan
-    }
+    // 4. PINDAH LAYAR: Tampilkan Header, Sembunyikan Scan
+    document.getElementById('group_header').style.display = 'block';
+    document.getElementById('group_scan').style.display = 'none';
 
-    // 5. Fokus Kursor langsung ke KD TOKO (Point Utama Kecepatan Kerja)
-    console.log("Ganti Faktur: Layar kembali ke Header.");
+    // 5. FOKUS KURSOR KEMBALI KE JENIS
     setTimeout(() => {
-        document.getElementById('p_kode').focus();
+        const inputJenis = document.getElementById('p_jenis');
+        if (inputJenis) inputJenis.focus();
     }, 200);
+
+    console.log("Form dibersihkan, kembali ke pemilihan Jenis.");
 }
 
 function showMonitoring() {
@@ -1756,6 +1816,69 @@ function kembaliKeHeader() {
 function resetTampilanLayar() {
     document.getElementById('group_header').style.display = 'block';
     document.getElementById('group_scan').style.display = 'none';
+}
+
+function showAntrianModal() {
+    const scanDB = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+    const tbody = document.getElementById('antrian_body');
+    tbody.innerHTML = "";
+
+    if (scanDB.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='4'>Tidak ada antrian data</td></tr>";
+    } else {
+        // Kelompokkan data berdasarkan No Faktur
+        const grouped = {};
+        scanDB.forEach(item => {
+            if (!grouped[item.faktur]) {
+                grouped[item.faktur] = {
+                    urpick: item.urpick || "-",
+                    kode: item.kode,
+                    nama: item.nama || "",
+                    tgl: item.tgl,
+                    jenis: item.jenis,
+                    items: 0
+                };
+            }
+            grouped[item.faktur].items++;
+        });
+
+        // Tampilkan ke Tabel
+        Object.keys(grouped).forEach(faktur => {
+            const g = grouped[faktur];
+            const row = `<tr>
+                <td>${g.urpick}</td>
+                <td style="text-align:left; padding:5px;"><b>${g.kode}</b><br>${g.nama}</td>
+                <td>${g.jenis}</td>
+                <td>
+                    <button onclick="pilihAntrian('${g.tgl}', '${g.kode}', '${faktur}', '${g.jenis}')" 
+                            style="background:#27ae60; color:white; border:none; padding:5px; border-radius:3px; font-size:9px;">
+                        PROSES FINAL
+                    </button>
+                </td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+    }
+    document.getElementById('modal_antrian').style.display = 'block';
+}
+
+function pilihAntrian(tgl, kode, faktur, jenis) {
+    // 1. Masukkan data ke input header
+    document.getElementById('p_tgl').value = tgl;
+    document.getElementById('p_kode').value = kode;
+    document.getElementById('p_jenis').value = jenis;
+    
+    // 2. Jalankan filter toko agar info nama muncul
+    processStoreInput(); 
+    
+    // 3. Set No Faktur dan trigger tampil area scan/report
+    setTimeout(() => {
+        document.getElementById('p_faktur').value = faktur;
+        document.getElementById('modal_antrian').style.display = 'none';
+        
+        // Langsung buka modal report (Final) untuk toko tersebut
+        showReport();
+    }, 500);
 }
 
 </script>
