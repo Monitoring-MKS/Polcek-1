@@ -276,7 +276,8 @@
         <div class="input-row"><div class="label">ZONA</div><input type="text" id="p_zona" readonly></div>
         <div class="input-row"><div class="label" style="background: #2c3e50;">QTY SCAN</div><input type="number" id="p_qty_input" placeholder="0" readonly></div>
         <input type="hidden" id="p_qty_data">
-
+       
+</div> 
 <div class="footer">
             <button class="btn-main" style="background:#2ecc71" onclick="saveData()">SIMPAN</button>
             <button class="btn-main" style="background:#8e44ad" onclick="showReport()">FINAL</button>
@@ -288,8 +289,7 @@
     📦 KLIK LIHAT ANTRIAN: <span id="badge" style="font-weight:bold; font-size:14px;">0</span> ITEM
 </div>
     </div>
-        
-</div> 
+
 
 <div id="modal_report" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:20000; overflow-y:auto; padding:10px;">
     <div style="background:white; border-radius:10px; padding:15px; min-height:100%; position: relative;">
@@ -370,6 +370,8 @@ const G_URL = "https://script.google.com/macros/s/AKfycbwhtWgjE8JvuPAd0KozLDEzWS
 var currentUser = "";
 var CACHED_DATA = null;
 
+
+
     const usersDB = [
     { nik: "10030732", nama: "URIP PRADIPTA", pass: "234" },
     { nik: "21084962", nama: "BASYUDIN KADRI", pass: "234" },
@@ -447,7 +449,12 @@ var CACHED_DATA = null;
     { nik: "03030112", nama: "IRWAN", pass: "234" },
     { nik: "01060319", nama: "BASUKI", pass: "234" },
     { nik: "10062381", nama: "REZKA SURYANTO", pass: "234" },
-    { nik: "08081171", nama: "LINGGA OKTA", pass: "234" }
+    { nik: "08081171", nama: "LINGGA OKTA", pass: "234" },
+    { nik: "23120912", nama: "HAMKA", pass: "234" },
+    { nik: "20085631", nama: "ABU BAKAR", pass: "234" },
+    { nik: "23072735", nama: "FIRMAN", pass: "234" },
+    { nik: "21045428", nama: "RISAL", pass: "234" }
+
 ];
 
     async function initApp() {
@@ -620,38 +627,56 @@ function aktifkanFullScreen() {
     });
 }
 
-    // ==========================================
-    // TRANSACTION LOGIC (SCAN & FILTER)
-    // ==========================================
-    function handleJenisChange() {
+function handleJenisChange() {
     const jenis = document.getElementById('p_jenis').value;
-    
-    // 1. Definisikan area scan yang butuh label/fisik
-    const butuhScan = ["KONTAINER", "DOS", "MANUAL", "TAG I"];
-    const rowScan = document.getElementById('row_scan_label');
-    if(rowScan) rowScan.style.display = butuhScan.includes(jenis) ? 'flex' : 'none';
-
-    // 2. KOSONGKAN SEMUA KOLOM (Point 8: Semua kontainer dikosongkan)
-    // Kecuali Tanggal dan Jenis itu sendiri
-    const idsToClear = ['p_kode', 'p_nama', 'p_urpick', 'p_scan_label', 'p_scan_fisik', 'p_plu', 'p_descp', 'p_zona', 'p_qty_input', 'p_qty_data'];
-    idsToClear.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = "";
-    });
-
-    // Reset dropdown faktur ke default
-    document.getElementById('p_faktur').innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
-
-    // Reset area fisik dan qty read-only
-    document.getElementById('area_fisik').style.display = 'none';
+    const kelompokNonScan = ["NON-LOKASI", "TELUR", "MKT", "ATK GS", "MATERAI"];
+    const areaFisik = document.getElementById('area_fisik');
+    const rowScanLabel = document.getElementById('row_scan_label');
     const qtyInp = document.getElementById('p_qty_input');
-    qtyInp.readOnly = true;
-    qtyInp.style.background = "#dcdcdc";
+    
+    // Poin 1: Sembunyikan Area Fisik jika bukan DOS/MANUAL
+    areaFisik.style.display = (jenis === "DOS" || jenis === "MANUAL") ? 'block' : 'none';
+    
+    // Kontainer & Tag I hanya butuh Label, Non-Scan tidak butuh keduanya
+    if (kelompokNonScan.includes(jenis)) {
+        if(rowScanLabel) rowScanLabel.style.display = 'none';
+        qtyInp.readOnly = false;
+        qtyInp.style.background = "white";
+    } else {
+        if(rowScanLabel) rowScanLabel.style.display = 'flex';
+        qtyInp.readOnly = true;
+        qtyInp.style.background = "#eeeeee";
+    }
 
-    // 3. FOKUS KURSOR KEMBALI KE KODE TOKO (Point 8)
-    if (jenis !== "") {
-        console.log("Jenis berubah ke " + jenis + ", kursor ke Kode Toko");
-        setFocus('p_kode');
+    // Reset fields (Sesuai kode asli Anda)
+    const idsToClear = ['p_kode', 'p_nama', 'p_urpick', 'p_scan_label', 'p_scan_fisik', 'p_plu', 'p_descp', 'p_zona', 'p_qty_input', 'p_qty_data'];
+    idsToClear.forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ""; });
+    document.getElementById('p_faktur').innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
+    
+    if (jenis !== "") setFocus('p_kode');
+}
+
+// Poin 2: Alur Fokus Faktur ke Qty (Untuk Non-Scan)
+function toggleKeScan() {
+    const jenis = document.getElementById('p_jenis').value;
+    const faktur = document.getElementById('p_faktur').value;
+    const kelompokNonScan = ["NON-LOKASI", "TELUR", "MKT", "ATK GS", "MATERAI"];
+    
+    if (!faktur) return;
+
+    // Poin 3: Hide Header (Grup Header hilang saat mulai scan)
+    document.getElementById('group_header').style.display = 'none';
+    document.getElementById('group_scan').style.display = 'block';
+
+    if (kelompokNonScan.includes(jenis)) {
+        // Langsung ke Qty untuk Non-Scan
+        setTimeout(() => { document.getElementById('p_qty_input').focus(); }, 300);
+    } else if (jenis === "DOS" || jenis === "MANUAL") {
+        // Ke Fisik untuk DOS/MANUAL
+        setTimeout(() => { document.getElementById('p_scan_fisik').focus(); }, 300);
+    } else {
+        // Sisanya (Kontainer/Tag I) ke Label
+        setTimeout(() => { document.getElementById('p_scan_label').focus(); }, 300);
     }
 }
 
@@ -697,221 +722,244 @@ function aktifkanFullScreen() {
     }
 }
 
-function validateScanLabel() {
-    // Ambil nilai asli
-    let rawScanVal = document.getElementById('p_scan_label').value;
-    
-    // BERSIHKAN SPASI: Menghapus spasi di awal, akhir, dan di TENGAH (misal: "A- B" jadi "A-B")
-    const scanVal = rawScanVal.replace(/\s+/g, '').toUpperCase().trim();
-    
-    // Update tampilan input agar user melihat data yang sudah bersih
-    document.getElementById('p_scan_label').value = scanVal;
+function hitungTotalTerScan(plu, faktur) {
+    let total = 0;
 
-    const jenisVal = document.getElementById('p_jenis').value;
-    const fakturVal = document.getElementById('p_faktur').value;
-    const tglPilih = document.getElementById('p_tgl').value;
-    const kodeToko = document.getElementById('p_kode').value.toUpperCase();
-
-    if (!scanVal) return;
-
-    // --- VALIDASI FINAL SERVER ---
-    const sudahFinalDiServer = dbSudahPolcek.some(s => 
-        s.tgl === tglPilih && s.kode === kodeToko && s.jenis === jenisVal
-    );
-    if (sudahFinalDiServer) {
-        document.getElementById('p_scan_label').value = "";
-        return Swal.fire({ icon: 'error', title: 'Akses Ditolak', text: `Toko ${kodeToko} sudah Final.` });
+    // 1. Cek di Database yang sudah terkirim (hasil sinkronisasi server)
+    // Pastikan variabel dbSudahPolcek ada di aplikasi Anda
+    if (typeof dbSudahPolcek !== 'undefined' && dbSudahPolcek.length > 0) {
+        dbSudahPolcek.forEach(d => {
+            if (String(d.plu).trim() === String(plu).trim() && d.faktur === faktur) {
+                total += parseInt(d.qty_scan || 0);
+            }
+        });
     }
 
-    // Split parts menggunakan data yang sudah bersih dari spasi
-    const parts = scanVal.split('-').filter(Boolean);
-
-    if (jenisVal === "KONTAINER") {
-        // parts[0] = A0001 (No Kontainer)
-        // parts[1] = R665  (Kode Toko dari Label)
-        const noKontainerLabel = parts[0] ? parts[0].toUpperCase() : "";
-        const kodeTokoLabel = parts[1] ? parts[1].toUpperCase() : "";
-
-        // 1. VALIDASI KODE TOKO
-        if (kodeTokoLabel !== kodeToko) {
-            document.getElementById('p_scan_label').value = "";
-            if (typeof playError === "function") playError(); 
-            return Swal.fire({
-                icon: 'error',
-                title: 'SALAH TOKO!',
-                text: `Label ini untuk Toko ${kodeTokoLabel}, sedangkan Anda sedang memproses Toko ${kodeToko}`
-            });
+    // 2. Cek di Antrian Lokal (LocalStorage) yang belum di-finalisasi
+    let antrian = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+    antrian.forEach(a => {
+        if (String(a.plu).trim() === String(plu).trim() && a.faktur === faktur) {
+            total += parseInt(a.qty_scan || 0);
         }
+    });
 
-        // 2. VALIDASI DOUBLE SCAN
-        let antrian = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-        if (antrian.some(item => item.barcode.toUpperCase().includes(noKontainerLabel) && item.kode === kodeToko && item.faktur === fakturVal)) {
-            document.getElementById('p_scan_label').value = "";
-            if (typeof playError === "function") playError();
-            return notify("⚠️ SUDAH SCAN KOLI TERSEBUT!", "error", "p_scan_label");
-        }
-
-        // 3. VALIDASI NO KONTAINER KE DATA PICK AUTO
-        const match = dbPickAuto.find(i => 
-            i.faktur === fakturVal && 
-            i.kodeToko === kodeToko && 
-            (i.kontainer || "").toUpperCase() === noKontainerLabel
-        );
-
-        if (match) { 
-            fillData(match); 
-            document.getElementById('p_qty_input').value = 1; 
-            document.getElementById('p_qty_input').readOnly = false;
-            
-            const elBarcode = document.getElementById('p_barcode');
-            if (elBarcode) elBarcode.value = scanVal; 
-
-            // --- LOGIKA AUTO SAVE ---
-            setTimeout(() => {
-                saveData(); 
-                document.getElementById('p_scan_label').value = "";
-                document.getElementById('p_scan_label').focus();
-            }, 300);
-        } else { 
-            if (typeof playError === "function") playError();
-            notify("⚠️ NO KONTAINER TIDAK ADA DI DATA!", "error", "p_scan_label"); 
-            document.getElementById('p_scan_label').value = ""; 
-        }
-
-    } else if (jenisVal === "DOS" || jenisVal === "MANUAL") {
-        if (jenisVal === "DOS") {
-            const tokoLabel = parts[2] ? parts[2].toUpperCase() : "";
-            const pluLabel = parts[3];
-
-            if (tokoLabel !== kodeToko) {
-                if (typeof playError === "function") playError(); 
-                document.getElementById('p_scan_label').value = "";
-                return Swal.fire({
-                    icon: 'error',
-                    title: 'DOS SALAH TOKO!',
-                    text: `Label DOS milik Toko ${tokoLabel}, bukan Toko ${kodeToko}`
-                });
-            }
-
-            const match = dbPickAuto.find(i => 
-                i.faktur === fakturVal && 
-                i.kodeToko === kodeToko && 
-                String(i.plu) === String(pluLabel)
-            );
-
-            if (match) {
-                fillData(match);
-                document.getElementById('p_qty_input').value = ""; 
-                document.getElementById('p_qty_input').readOnly = true; 
-                document.getElementById('p_qty_input').style.background = "#eeeeee";
-                document.getElementById('area_fisik').style.display = 'block';
-                setTimeout(() => { document.getElementById('p_scan_fisik').focus(); }, 300);
-            } else {
-                if (typeof playError === "function") playError();
-                notify("⚠️ PLU TIDAK ADA DI MASTER PICKING!", "error", "p_scan_label");
-                document.getElementById('p_scan_label').value = "";
-            }
-
-        } else if (jenisVal === "MANUAL") {
-            const prefixFaktur = parts[0] ? parts[0].toUpperCase() : ""; 
-            const nomorFaktur  = parts[1] ? parts[1].toUpperCase() : ""; 
-            const fakturLabel  = `${prefixFaktur}-${nomorFaktur}`; 
-            const pluLabel = parts[2]; 
-
-            if (fakturLabel !== fakturVal.toUpperCase()) {
-                if (typeof playError === "function") playError();
-                document.getElementById('p_scan_label').value = "";
-                return Swal.fire({
-                    icon: 'error',
-                    title: 'FAKTUR BERBEDA!',
-                    text: `Label: ${fakturLabel}\nAktif: ${fakturVal}`
-                });
-            }
-
-            const match = dbManual.find(i => 
-                i.faktur === fakturVal && 
-                String(i.plu) === String(pluLabel)
-            );
-
-            if (match) {
-                fillData(match);
-                document.getElementById('p_qty_input').value = "";
-                document.getElementById('p_qty_input').readOnly = true;
-                document.getElementById('p_qty_input').style.background = "#eeeeee";
-                document.getElementById('area_fisik').style.display = 'block';
-                setTimeout(() => { 
-                    document.getElementById('p_scan_fisik').value = "";
-                    document.getElementById('p_scan_fisik').focus(); 
-                }, 300);
-            } else {
-                if (typeof playError === "function") playError();
-                notify(`⚠️ PLU ${pluLabel} TIDAK ADA DI DATA MANUAL FAKTUR INI!`, "error", "p_scan_label");
-                document.getElementById('p_scan_label').value = "";
-            }
-        }
-
-    } else if (jenisVal === "TAG I") {
-        document.getElementById('p_plu').value = "TAG-I";
-        document.getElementById('p_descp').value = "RECORD SCAN TAG I";
-        document.getElementById('p_qty_input').readOnly = false;
-        document.getElementById('p_qty_input').style.background = "white";
-        setFocus('p_qty_input');
-    }
+    return total;
 }
 
 function validateScanFisik() {
     const scanFisik = document.getElementById('p_scan_fisik').value.trim();
-    const pluTarget = String(document.getElementById('p_plu').value).trim();
+    const pluAktif = document.getElementById('p_plu').value;
+    const labelAktif = document.getElementById('p_scan_label').value;
     const qtyInp = document.getElementById('p_qty_input');
+    const qtyTarget = parseInt(document.getElementById('p_qty_data').value || 0);
+    const fakturVal = document.getElementById('p_faktur').value;
+    const kodeToko = document.getElementById('p_kode').value.toUpperCase();
 
     if (!scanFisik) return;
-    if (!pluTarget || pluTarget === "-") {
-        if (typeof playError === "function") playError();
-        return notify("⚠️ SCAN LABEL DULU!", "error", "p_scan_label");
+
+    // KONDISI A: TAMBAH QTY (Jika data sudah tampil dan Label sudah match)
+    if (pluAktif && pluAktif !== "-" && labelAktif !== "") {
+        const matchLanjutan = dbMasterBarcode.find(m => 
+            (scanFisik === String(m.barcodeDos).trim() || scanFisik === String(m.barcodeItem).trim()) 
+            && String(m.plu).trim() === String(pluAktif).trim()
+        );
+
+        if (matchLanjutan) {
+            let sudahAda = hitungTotalTerScan(pluAktif, fakturVal);
+            let sedangInput = parseInt(qtyInp.value) || 0;
+
+            if ((sudahAda + sedangInput) >= qtyTarget) {
+                if (typeof playError === "function") playError();
+                Swal.fire("OVER QTY!", `Target: ${qtyTarget}\nSudah Scan: ${sudahAda + sedangInput}`, "error");
+                document.getElementById('p_scan_fisik').value = "";
+                return;
+            }
+
+            qtyInp.value = sedangInput + 1;
+            document.getElementById('p_scan_fisik').value = "";
+            document.getElementById('p_scan_fisik').focus();
+        } else {
+            if (typeof playError === "function") playError();
+            Swal.fire("BARANG BERBEDA", "PLU fisik tidak sama dengan data di layar!", "warning");
+            document.getElementById('p_scan_fisik').value = "";
+        }
+        return;
     }
 
-    // Cari kecocokan di master barcode
-    const match = dbMasterBarcode.find(m => 
-        (scanFisik === String(m.barcodeDos).trim() || scanFisik === String(m.barcodeItem).trim()) 
-        && String(m.plu).trim() === pluTarget
+    // KONDISI B: SCAN PERTAMA (Ambil Data PLU ke Layar)
+    const matchMB = dbMasterBarcode.find(m => 
+        scanFisik === String(m.barcodeDos).trim() || scanFisik === String(m.barcodeItem).trim()
     );
 
-    if (match) {
-        // Tambah Qty otomatis
-        let currentQty = parseInt(qtyInp.value) || 0;
-        qtyInp.value = currentQty + 1; 
+    if (matchMB) {
+        const foundPLU = String(matchMB.plu).trim();
+        const jenisVal = document.getElementById('p_jenis').value;
         
-        // --- KUNCIAN MATI ---
-        qtyInp.readOnly = true; 
-        qtyInp.style.background = "#eeeeee"; // Warna abu-abu (tanda terkunci)
-        qtyInp.style.color = "#000"; // Pastikan angka tetap jelas terbaca
+        let matchPicking;
+        if (jenisVal === "DOS") {
+            matchPicking = dbPickAuto.find(i => i.faktur === fakturVal && i.kodeToko === kodeToko && String(i.plu) === foundPLU);
+        } else if (jenisVal === "MANUAL") {
+            matchPicking = dbManual.find(i => i.faktur === fakturVal && String(i.plu) === foundPLU);
+        }
 
-        // Reset input scan fisik untuk barang berikutnya
-        document.getElementById('p_scan_fisik').value = ""; 
-        document.getElementById('p_scan_fisik').focus(); 
-        
-        // Opsional: Bunyi beep pendek tanda scan berhasil
-        // playSuccessBeep(); 
+        if (matchPicking) {
+            fillData(matchPicking); // Ini akan mengisi p_plu, p_descp, p_zona, p_qty_data
+            qtyInp.value = 0; 
+            document.getElementById('p_scan_fisik').value = "";
+            setTimeout(() => { document.getElementById('p_scan_label').focus(); }, 300);
+        } else {
+            if (typeof playError === "function") playError();
+            notify(`⚠️ PLU ${foundPLU} Tidak Ada di Faktur Ini!`, "error", "p_scan_fisik");
+            document.getElementById('p_scan_fisik').value = "";
+        }
     } else {
         if (typeof playError === "function") playError();
-        notify("⚠️ FISIK SALAH / PLU TIDAK SESUAI!", "error", "p_scan_fisik");
+        notify("⚠️ BARCODE TIDAK TERDAFTAR!", "error", "p_scan_fisik");
         document.getElementById('p_scan_fisik').value = "";
     }
 }
-    function fillData(m) {
-        const jenis = document.getElementById('p_jenis').value;
-        const faktur = document.getElementById('p_faktur').value;
-        const kodeToko = document.getElementById('p_kode').value.toUpperCase();
-        document.getElementById('p_plu').value = m.plu || "-";
-        document.getElementById('p_descp').value = m.descp || "-";
-        document.getElementById('p_zona').value = m.zona || "-";
-        let totalTargetToko = 0;
-        const currentDB = (jenis === "MANUAL") ? dbManual : dbPickAuto;
-        currentDB.forEach(item => { if (item.faktur === faktur && item.kodeToko === kodeToko && item.plu === m.plu) totalTargetToko += parseInt(item.qtyData || 0); });
-        if (jenis === "KONTAINER") totalTargetToko = 1;
-        document.getElementById('p_qty_data').value = totalTargetToko;
+
+function validateScanLabel() {
+    let rawScanVal = document.getElementById('p_scan_label').value;
+    const scanVal = rawScanVal.replace(/\s+/g, '').toUpperCase().trim();
+    document.getElementById('p_scan_label').value = scanVal;
+
+    const jenisVal = document.getElementById('p_jenis').value;
+    const kodeToko = document.getElementById('p_kode').value.toUpperCase();
+    const fakturVal = document.getElementById('p_faktur').value;
+    const pluAktif = String(document.getElementById('p_plu').value).trim();
+
+    if (!scanVal) return;
+
+    // --- ALUR A: UNTUK DOS & MANUAL (Validasi terhadap Scan Fisik) ---
+    if (jenisVal === "DOS" || jenisVal === "MANUAL") {
+        if (!pluAktif || pluAktif === "-") {
+            document.getElementById('p_scan_label').value = "";
+            return Swal.fire("Urutan Salah", "Scan Barcode FISIK barang dulu!", "warning");
+        }
+
+        const parts = scanVal.split('-').filter(Boolean);
+        let pluLabel = (jenisVal === "DOS") ? parts[3] : parts[2];
+        let tokoLabel = (jenisVal === "DOS") ? (parts[2] || "").toUpperCase() : kodeToko;
+
+        if (jenisVal === "DOS" && tokoLabel !== kodeToko) {
+            if (typeof playError === "function") playError();
+            document.getElementById('p_scan_label').value = "";
+            return Swal.fire("SALAH TOKO", `Label: ${tokoLabel}, Aktif: ${kodeToko}`, "error");
+        }
+
+        if (String(pluLabel) === pluAktif) {
+            document.getElementById('p_qty_input').value = 1;
+            setTimeout(() => { document.getElementById('p_scan_fisik').focus(); }, 100);
+        } else {
+            if (typeof playError === "function") playError();
+            Swal.fire("PLU TIDAK COCOK", `Label: ${pluLabel} | Fisik: ${pluAktif}`, "error");
+            document.getElementById('p_scan_label').value = "";
+        }
+
+    // --- ALUR B: UNTUK KONTAINER (Langsung Save) ---
+} else if (jenisVal === "KONTAINER") {
+    const parts = scanVal.split('-').filter(Boolean);
+    const noKontainerLabel = parts[0] ? parts[0].toUpperCase() : "";
+    const kodeTokoLabel = parts[1] ? parts[1].toUpperCase() : "";
+
+    // 1. VALIDASI KODE TOKO
+    if (kodeTokoLabel !== kodeToko) {
+        document.getElementById('p_scan_label').value = "";
+        if (typeof playError === "function") playError(); 
+        return Swal.fire({
+            icon: 'error',
+            title: 'SALAH TOKO!',
+            text: `Label ini untuk Toko ${kodeTokoLabel}, sedangkan Anda sedang memproses Toko ${kodeToko}`
+        });
     }
 
+    // 2. PROTEKSI DOUBLE SCAN (Cek Data Antrian/Database Lokal)
+    let antrian = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+    
+    // Kita cari apakah ada yang barcode-nya mengandung No Kontainer ini
+    // dan Faktur serta Toko-nya sama
+    const sudahAda = antrian.find(item => 
+        item.faktur === fakturVal && 
+        item.kode === kodeToko && 
+        item.barcode.toUpperCase().includes(noKontainerLabel)
+    );
+
+    if (sudahAda) {
+        document.getElementById('p_scan_label').value = "";
+        if (typeof playError === "function") playError();
+        return Swal.fire({
+            icon: 'warning',
+            title: 'SUDAH SCAN!',
+            text: `Kontainer ${noKontainerLabel} sudah ada di daftar antrian.`
+        });
+    }
+
+    // 3. VALIDASI KE DATABASE PICK AUTO (dbPickAuto)
+    const match = dbPickAuto.find(i => 
+        i.faktur === fakturVal && 
+        i.kodeToko === kodeToko && 
+        (i.kontainer || "").toUpperCase() === noKontainerLabel
+    );
+
+    if (match) { 
+        // Mengisi data ke field input
+        fillData(match); 
+        
+        // Paksa Qty Scan menjadi 1 dan kunci fieldnya
+        document.getElementById('p_qty_input').value = 1; 
+        document.getElementById('p_qty_input').readOnly = true;
+        document.getElementById('p_qty_input').style.background = "#dcdcdc";
+
+        // Pastikan field barcode diisi nilai lengkap dari scan
+        document.getElementById('p_scan_label').value = scanVal.toUpperCase();
+
+        // 4. AUTO SAVE
+        setTimeout(() => {
+            saveData(); 
+            // Setelah saveData, kursor akan diatur oleh afterSaveFocus
+        }, 300);
+
+    } else { 
+        if (typeof playError === "function") playError();
+        notify("⚠️ NO KONTAINER TIDAK ADA DI DATA!", "error", "p_scan_label"); 
+        document.getElementById('p_scan_label').value = ""; 
+    }
+
+    // --- ALUR C: UNTUK TAG I ---
+    } else if (jenisVal === "TAG I") {
+        document.getElementById('p_plu').value = "TAG-I";
+        document.getElementById('p_qty_input').value = 1;
+        document.getElementById('p_qty_input').readOnly = false;
+        setFocus('p_qty_input');
+    }
+}
+
+// --- 3. FUNGSI FILL DATA ---
+function fillData(m) {
+    const jenis = document.getElementById('p_jenis').value;
+    const faktur = document.getElementById('p_faktur').value;
+    const kodeToko = document.getElementById('p_kode').value.toUpperCase();
+    
+    document.getElementById('p_plu').value = m.plu || "-";
+    document.getElementById('p_descp').value = m.descp || "-";
+    document.getElementById('p_zona').value = m.zona || "-";
+    
+    let totalTargetToko = 0;
+    const currentDB = (jenis === "MANUAL") ? dbManual : dbPickAuto;
+    currentDB.forEach(item => { 
+        if (item.faktur === faktur && item.kodeToko === kodeToko && item.plu === m.plu) 
+            totalTargetToko += parseInt(item.qtyData || 0); 
+    });
+    
+    if (jenis === "KONTAINER") totalTargetToko = 1;
+    document.getElementById('p_qty_data').value = totalTargetToko;
+
+    // Pastikan kolom fisik muncul
+    document.getElementById('area_fisik').style.display = 'block';
+}
+
+// --- 4. FUNGSI SAVE DATA (BERSIHKAN SEMUA) ---
 async function saveData() {
 
     const qtyInp = document.getElementById('p_qty_input');
@@ -960,13 +1008,20 @@ async function saveData() {
             qty_scan: parseInt(qtyInp.value),
             petugas: currentUser
         });
-        localStorage.setItem('q_polcek', JSON.stringify(q));
+localStorage.setItem('q_polcek', JSON.stringify(q));
         updateBadge();
-        afterSaveFocus(jenis);
+
+        // --- TAMBAHKAN PROSES RESET DI SINI ---
+        const toReset = ['p_scan_label', 'p_scan_fisik', 'p_plu', 'p_descp', 'p_zona', 'p_qty_input', 'p_qty_data'];
+        toReset.forEach(id => { 
+            if(document.getElementById(id)) document.getElementById(id).value = ""; 
+        });
+
+        // Jalankan fungsi fokus dan pastikan area fisik tetap muncul
+        afterSaveFocus(jenis); 
     }
 }
 
-// Fungsi pembantu untuk kirim data kelompok Non-Scan
 async function kirimDataLangsung(data) {
     const loader = document.getElementById('loader');
     loader.style.display = 'flex'; // Loader jalan
@@ -992,26 +1047,44 @@ async function kirimDataLangsung(data) {
 }
 
 function afterSaveFocus(jenis) {
-    const kelompokNonScan = ["NON-LOKASI","TELUR", "MKT", "ATK GS", "MATERAI"];
+    const kelompokNonScan = ["NON-LOKASI", "TELUR", "MKT", "ATK GS", "MATERAI"];
 
-    // 1. Reset field input (Point 9)
-    ['p_scan_label','p_scan_fisik','p_plu','p_descp','p_zona','p_qty_input','p_qty_data'].forEach(id => {
-        if(document.getElementById(id)) document.getElementById(id).value = "";
+    // 1. Reset field input
+    ['p_scan_label', 'p_scan_fisik', 'p_plu', 'p_descp', 'p_zona', 'p_qty_input', 'p_qty_data'].forEach(id => {
+        if (document.getElementById(id)) document.getElementById(id).value = "";
     });
 
-    if (kelompokNonScan.includes(jenis)) {
-        // KHUSUS BARANG INI: Reset Dropdown Jenis ke default & Fokus ke Jenis
-        document.getElementById('p_jenis').value = ""; 
-        setFocus('p_jenis');
-    } else {
-        // DOS, MANUAL, KONTAINER, TAG I -> Tetap di Jenis yang sama, tapi Fokus ke Scan Label
-        setFocus('p_scan_label');
-    }
-    
-    document.getElementById('area_fisik').style.display = 'none';
     const qtyInp = document.getElementById('p_qty_input');
-    qtyInp.readOnly = true; 
-    qtyInp.style.background = "#dcdcdc";
+    const areaFisik = document.getElementById('area_fisik');
+
+    // 2. Logika Berdasarkan Jenis
+    if (kelompokNonScan.includes(jenis)) {
+        // KHUSUS NON-SCAN: Sembunyikan area fisik & reset dropdown
+        if (areaFisik) areaFisik.style.display = 'none';
+        document.getElementById('p_jenis').value = "";
+        setFocus('p_jenis');
+        
+    } else if (jenis === "DOS" || jenis === "MANUAL") {
+        // KHUSUS DOS/MANUAL: Pastikan area fisik MUNCUL & fokus ke SCAN FISIK
+        if (areaFisik) areaFisik.style.display = 'block';
+        qtyInp.readOnly = true;
+        qtyInp.style.background = "#eeeeee";
+        
+        setTimeout(() => {
+            const inpFisik = document.getElementById('p_scan_fisik');
+            if (inpFisik) inpFisik.focus();
+        }, 300);
+
+    } else {
+        // UNTUK KONTAINER / TAG I: Sembunyikan fisik & fokus ke SCAN LABEL
+        if (areaFisik) areaFisik.style.display = 'none';
+        qtyInp.readOnly = (jenis === "KONTAINER"); // Kontainer terkunci, TAG I mungkin tidak
+        
+        setTimeout(() => {
+            const inpLabel = document.getElementById('p_scan_label');
+            if (inpLabel) inpLabel.focus();
+        }, 300);
+    }
 }
 
     async function prosesFinalisasi() {
@@ -1298,11 +1371,17 @@ function renderMonitorTable(dataMap) {
         document.getElementById('report_title').innerText = "DATA COMPARE";
     }
 
-    async function revisiQty(key, barcode) {
-    // 1. Tutup modal utama (Point 11)
+    async function revisiQty(index) {
+    // 1. Ambil data asli dari LocalStorage
+    let allData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+    let item = allData[index];
+
+    if (!item) return Swal.fire("Error", "Data tidak ditemukan!", "error");
+
+    // 2. Tutup modal utama agar tidak menumpuk (Sesuai Script Asli)
     document.getElementById('modal_report').style.display = 'none';
 
-    // 2. Minta OTP
+    // 3. Minta OTP (Tetap dipertahankan)
     const { value: otp } = await Swal.fire({ 
         title: 'Minta OTP', 
         input: 'password', 
@@ -1311,34 +1390,61 @@ function renderMonitorTable(dataMap) {
     });
 
     if (otp === "234") {
-        // 3. Input Qty Baru
+        // 4. Input Qty Baru
         const { value: newQty } = await Swal.fire({ 
-            title: 'Input Qty Baru', 
+            title: 'Input Qty Baru',
+            html: `Item: <b>${item.descp}</b><br>Target: ${item.qty_data}`,
             input: 'number', 
             showCancelButton: true 
         });
 
         if (newQty !== null && newQty !== "") {
-            let allData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-            // Cari data berdasarkan barcode atau PLU
-            const idx = allData.findIndex(i => 
-                i.kode === document.getElementById('p_kode').value && 
-                (i.barcode === barcode || i.plu === barcode || i.barcode.includes(barcode))
-            );
-            
-            if (idx !== -1) { 
-                allData[idx].qty_scan = parseInt(newQty); 
+            let qtyBaru = parseInt(newQty);
+
+            // Validasi agar tidak melebihi target khusus DOS & MANUAL
+            if ((item.jenis === "DOS" || item.jenis === "MANUAL") && qtyBaru > item.qty_data) {
+                if (typeof playError === "function") playError();
+                await Swal.fire("Error", `Qty tidak boleh melebihi target (${item.qty_data})`, "error");
+            } else {
+                
+                // --- BAGIAN PERBAIKAN LOGIKA AGAR TIDAK DOUBLE (4 JADI 8) ---
+                if (item.jenis === "DOS" || item.jenis === "MANUAL") {
+                    // Simpan data yang sudah diupdate ke variabel sementara
+                    item.qty_scan = qtyBaru;
+
+                    // Buang SEMUA baris lama yang punya PLU dan Faktur yang sama
+                    // agar tidak ada sisa-sisa scan lama yang menjumlah
+                    allData = allData.filter((val, idx) => {
+                        // Jangan buang baris yang sedang kita edit (berdasarkan index)
+                        if (idx === index) return true;
+                        // Buang baris lain jika PLU dan Faktur-nya sama
+                        return !(val.plu === item.plu && val.faktur === item.faktur);
+                    });
+                    
+                    // Update nilai di index tersebut
+                    allData[allData.indexOf(item)].qty_scan = qtyBaru;
+                } else {
+                    // Untuk jenis lain (KONTAINER dsb), update seperti biasa
+                    allData[index].qty_scan = qtyBaru;
+                }
+                // ------------------------------------------------------------
+
                 localStorage.setItem('q_polcek', JSON.stringify(allData));
                 
-                // Notifikasi sukses sebelum balik ke modal
-                await Swal.fire({ title: "Berhasil", text: "Qty Diperbarui", icon: "success", timer: 1000, showConfirmButton: false });
+                await Swal.fire({ 
+                    title: "Berhasil", 
+                    text: "Qty Diperbarui", 
+                    icon: "success", 
+                    timer: 1000, 
+                    showConfirmButton: false 
+                });
             }
         }
     } else if (otp !== undefined) {
         await Swal.fire("Error", "OTP Salah!", "error");
     }
 
-    // 4. Otomatis kembali ke layar modal final (Point 11)
+    // 5. Kembali ke layar modal report (Sesuai Script Asli)
     showReport(); 
 }
 
@@ -1347,6 +1453,7 @@ function renderMonitorTable(dataMap) {
     const kode = document.getElementById('p_kode').value.trim().toUpperCase();
     const jenis = document.getElementById('p_jenis').value;
     const faktur = document.getElementById('p_faktur').value;
+    
     if (!tglRaw || !kode || !faktur) return Swal.fire("Peringatan", "Lengkapi data Toko dan Faktur!", "warning");
 
     const scanDB = JSON.parse(localStorage.getItem('q_polcek') || "[]");
@@ -1356,7 +1463,7 @@ function renderMonitorTable(dataMap) {
     const tglCheck = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
     
     let reportMap = {};
-    let isAllMatch = true; // Akan tetap true jika semua "DONE"
+    let isAllMatch = true; 
     let isComparisonType = ["KONTAINER", "DOS", "MANUAL"].includes(jenis);
 
     if (isComparisonType) {
@@ -1392,52 +1499,62 @@ function renderMonitorTable(dataMap) {
     Object.keys(reportMap).forEach(key => {
         const r = reportMap[key];
         
-        // AMBIL DATA DARI LOCALSTORAGE UNTUK CEK APAKAH SUDAH ADA KETERANGAN PAKSA FINAL
-        // Kita cari apakah ada item di aktualData yang punya keterangan untuk PLU/Key ini
-        const itemPunyaKet = aktualData.find(i => 
-            (i.plu === key || i.barcode && i.barcode.includes(key) || (key.includes(' | ') && i.plu === key.split(' | ')[1]))
-            && i.keterangan && i.keterangan !== ""
+        // 1. CARI DATA ASLI UNTUK MENDAPATKAN INDEX DAN KETERANGAN
+        const itemDitemukan = aktualData.find(i => 
+            (i.plu === key || (i.barcode && i.barcode.includes(key)) || (key.includes(' | ') && i.plu === key.split(' | ')[1]))
         );
 
+        // Cari index asli di scanDB (LocalStorage Utama)
+        const indexAsli = scanDB.findIndex(x => x === itemDitemukan);
+        const itemPunyaKet = itemDitemukan && itemDitemukan.keterangan ? itemDitemukan.keterangan : "";
+
+        // 2. TENTUKAN STATUS
         let status;
         if (r.target === "N/A" || r.scan === r.target) {
             status = "DONE";
-        } else if (itemPunyaKet) {
-            status = "SELISIH"; // Status khusus untuk yang sudah di-OTP & diberi keterangan
+        } else if (itemPunyaKet !== "") {
+            status = "SELISIH"; 
         } else {
             status = (r.scan < r.target ? "PENDING" : "OVER");
         }
         
-        // Logika Tombol Finalisasi: Jika DONE atau SELISIH, maka dianggap valid untuk kirim
         if (status !== "DONE" && status !== "SELISIH") isAllMatch = false; 
         
-        // Penentuan Warna: Tambahkan warna Orange untuk yang SELISIH (Sudah di-OTP)
+        // 3. TENTUKAN WARNA
         const colorBg = status === 'DONE' ? '#d4edda' : 
-                        (status === 'SELISIH' ? '#ffcc80' : // Warna Orange muda
+                        (status === 'SELISIH' ? '#ffcc80' : 
                         (status === 'PENDING' ? '#f8d7da' : '#fff3cd'));
 
         const displayDesc = (jenis === "KONTAINER" || !r.desc) ? "" : `<br><small>${r.desc}</small>`;
-        const ketTampil = itemPunyaKet ? `<br><i style="font-size:9px; color:brown;">Ket: ${itemPunyaKet.keterangan}</i>` : "";
+        const ketTampil = itemPunyaKet ? `<br><i style="font-size:9px; color:brown;">Ket: ${itemPunyaKet}</i>` : "";
 
+        // 4. GENERATE BARIS TABEL (MENGGUNAKAN revisiQty DENGAN INDEX)
         html += `<tr style="background:${colorBg}">
-            <td style="text-align:left; padding:5px;"><b>${key}</b>${displayDesc}${ketTampil}</td>
+            <td style="text-align:left; padding:5px;">
+                <b>${key}</b>${displayDesc}${ketTampil}
+            </td>
             <td>${r.target}</td>
             <td>${r.scan}</td>
             <td>
                 <b>${status}</b><br>
-                <button onclick="editItemAntrian('${key}')" style="font-size:10px; background:#f39c12; color:white; border:none; border-radius:3px; padding:3px 8px;">REVISI</button>
+                <button onclick="revisiQty(${indexAsli})" 
+                        style="font-size:10px; background:#f39c12; color:white; border:none; border-radius:3px; padding:3px 8px;">
+                    REVISI
+                </button>
             </td>
         </tr>`;
     });
 
+    // 5. UPDATE TAMPILAN
     document.getElementById('report_info').innerHTML = `<b>${jenis}</b> | ${kode} | ${faktur}`;
     document.getElementById('report_body').innerHTML = html || "<tr><td colspan='4'>Belum ada data</td></tr>";
     document.getElementById('modal_report').style.display = 'block';
     
-    // Aktifkan tombol jika isAllMatch true dan data tidak kosong
     const btnFin = document.getElementById('btn_finalisasi');
-    btnFin.disabled = !(Object.keys(reportMap).length > 0 && isAllMatch);
-    btnFin.style.opacity = btnFin.disabled ? "0.3" : "1";
+    if (btnFin) {
+        btnFin.disabled = !(Object.keys(reportMap).length > 0 && isAllMatch);
+        btnFin.style.opacity = btnFin.disabled ? "0.3" : "1";
+    }
 }
 
 function processStoreInput() {
@@ -1792,24 +1909,10 @@ function backToHeader() {
     document.getElementById('p_faktur').innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
 }
 
-function toggleKeScan() {
-    const faktur = document.getElementById('p_faktur').value;
-    if (faktur !== "") {
-        // Sembunyikan Header, Tampilkan Area Scan
-        document.getElementById('group_header').style.display = 'none';
-        document.getElementById('group_scan').style.display = 'block';
-        
-        // Langsung fokus ke Scan Label agar petugas tidak klik layar lagi
-        setTimeout(() => {
-            document.getElementById('p_scan_label').focus();
-        }, 200);
-    }
-}
-
 function kembaliKeHeader() {
-    // Tampilkan kembali Header untuk ganti Toko/Faktur
     document.getElementById('group_header').style.display = 'block';
     document.getElementById('group_scan').style.display = 'none';
+    setFocus('p_faktur');
 }
 
 // Pastikan saat Clear data atau setelah Final, tampilan kembali ke Header
@@ -1823,10 +1926,13 @@ function showAntrianModal() {
     const tbody = document.getElementById('antrian_body');
     tbody.innerHTML = "";
 
+    // 1. Bersihkan area tombol bawah agar tidak duplikat saat dibuka berkali-kali
+    const oldContainer = document.getElementById('footer_antrian_action');
+    if (oldContainer) oldContainer.remove();
+
     if (scanDB.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='4'>Tidak ada antrian data</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='4' style='padding:20px;'>Tidak ada antrian data</td></tr>";
     } else {
-        // Kelompokkan data berdasarkan No Faktur
         const grouped = {};
         scanDB.forEach(item => {
             if (!grouped[item.faktur]) {
@@ -1835,14 +1941,11 @@ function showAntrianModal() {
                     kode: item.kode,
                     nama: item.nama || "",
                     tgl: item.tgl,
-                    jenis: item.jenis,
-                    items: 0
+                    jenis: item.jenis
                 };
             }
-            grouped[item.faktur].items++;
         });
 
-        // Tampilkan ke Tabel
         Object.keys(grouped).forEach(faktur => {
             const g = grouped[faktur];
             const row = `<tr>
@@ -1850,16 +1953,122 @@ function showAntrianModal() {
                 <td style="text-align:left; padding:5px;"><b>${g.kode}</b><br>${g.nama}</td>
                 <td>${g.jenis}</td>
                 <td>
-                    <button onclick="pilihAntrian('${g.tgl}', '${g.kode}', '${faktur}', '${g.jenis}')" 
-                            style="background:#27ae60; color:white; border:none; padding:5px; border-radius:3px; font-size:9px;">
-                        PROSES FINAL
-                    </button>
+                    <div style="display:flex; flex-direction:column; gap:3px; padding:5px;">
+                        <button onclick="pilihAntrian('${g.tgl}', '${g.kode}', '${faktur}', '${g.jenis}')" 
+                                style="background:#27ae60; color:white; border:none; padding:5px; border-radius:3px; font-size:9px; cursor:pointer;">
+                            PROSES FINAL
+                        </button>
+                        <button onclick="hapusSatuAntrian('${faktur}')" 
+                                style="background:#e74c3c; color:white; border:none; padding:5px; border-radius:3px; font-size:9px; cursor:pointer;">
+                            HAPUS
+                        </button>
+                    </div>
                 </td>
             </tr>`;
             tbody.innerHTML += row;
         });
+
+        // 2. LOGIKA TOMBOL BERDAMPINGAN
+        // Cari tombol TUTUP asli
+        const btnTutupAsli = document.querySelector('#modal_antrian .btn-main[onclick*="modal_antrian"]');
+        
+        if (btnTutupAsli) {
+            // Sembunyikan tombol tutup yang lama agar kita pindahkan ke container baru
+            btnTutupAsli.style.display = 'none';
+
+            // Buat container flex
+            const footerAction = document.createElement('div');
+            footerAction.id = 'footer_antrian_action';
+            footerAction.style = "display: flex; gap: 10px; margin-top: 20px;";
+
+            // Buat tombol BERSIHKAN
+            const btnClean = document.createElement('button');
+            btnClean.innerHTML = "🗑️ BERSIHKAN";
+            btnClean.className = "btn-main"; // Gunakan class yang sama agar style seragam
+            btnClean.style = "background: #c0392b; flex: 1; padding: 12px; border-radius: 5px; color: white; border: none; font-weight: bold; cursor: pointer;";
+            btnClean.onclick = hapusSemuaAntrian;
+
+            // Buat ulang tombol TUTUP di sampingnya
+            const btnClose = document.createElement('button');
+            btnClose.innerHTML = "TUTUP";
+            btnClose.className = "btn-main";
+            btnClose.style = "background: #34495e; flex: 1; padding: 12px; border-radius: 5px; color: white; border: none; font-weight: bold; cursor: pointer;";
+            btnClose.onclick = () => document.getElementById('modal_antrian').style.display = 'none';
+
+            footerAction.appendChild(btnClean);
+            footerAction.appendChild(btnClose);
+            
+            // Masukkan ke bawah tabel
+            btnTutupAsli.parentNode.appendChild(footerAction);
+        }
     }
     document.getElementById('modal_antrian').style.display = 'block';
+}
+
+// FUNGSI 1: Hapus per toko/faktur
+function hapusSatuAntrian(faktur) {
+    Swal.fire({
+        title: 'Hapus Antrian?',
+        text: `Faktur ${faktur} akan dihapus dari antrian.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Ya, Hapus!',
+        didOpen: () => {
+            const container = Swal.getContainer();
+            if (container) {
+                container.style.zIndex = '99999';
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            let db = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+            let filtered = db.filter(i => i.faktur !== faktur);
+            localStorage.setItem('q_polcek', JSON.stringify(filtered));
+            
+            if (typeof updateBadge === "function") updateBadge();
+            showAntrianModal();
+
+            Swal.fire({
+                title: 'Terhapus!',
+                icon: 'success',
+                timer: 800,
+                showConfirmButton: false,
+                didOpen: () => { Swal.getContainer().style.zIndex = '99999'; }
+            });
+        }
+    });
+}
+
+function hapusSemuaAntrian() {
+    Swal.fire({
+        title: 'Kosongkan Antrian?',
+        text: "Semua data akan dihapus untuk pembersihan data harian!",
+        icon: 'warning', // Diubah dari 'danger' ke 'warning'
+        showCancelButton: true,
+        confirmButtonColor: '#c0392b',
+        confirmButtonText: 'YA, BERSIHKAN!',
+        // Memastikan z-index SweetAlert lebih tinggi dari modal (20000)
+        didOpen: () => {
+            const container = Swal.getContainer();
+            if (container) {
+                container.style.zIndex = '99999';
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            localStorage.removeItem('q_polcek');
+            if (typeof updateBadge === "function") updateBadge();
+            showAntrianModal(); 
+            
+            Swal.fire({
+                title: 'Bersih!',
+                text: 'Data antrian telah dikosongkan.',
+                icon: 'success',
+                didOpen: () => { Swal.getContainer().style.zIndex = '99999'; }
+            });
+        }
+    });
 }
 
 function pilihAntrian(tgl, kode, faktur, jenis) {
