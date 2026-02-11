@@ -269,7 +269,7 @@
     <div class="header">POLCEK - WH MAKASSAR <br><span style="font-size: 9px; color: yellow;">V.01.02.26@ mks-bersatu</span></div>
     <div class="user-bar"><span>User: <b id="display_user">---</b></span><button class="btn-logout" onclick="doLogout()">LOGOUT</button></div>
 
-    <div id="group_header">
+<div id="group_header" style="display: block;">
         <div class="input-row"><div class="label">TGL PROSES</div><input type="date" id="p_tgl" onchange="setFocus('p_jenis')"></div>
         <div class="input-row">
             <div class="label" style="background:var(--blue)">JENIS</div>
@@ -277,14 +277,7 @@
                 <option value="">-- PILIH JENIS --</option>
                 <option value="KONTAINER">KONTAINER</option>
                 <option value="DOS">DOS</option>
-                <option value="MANUAL">MANUAL</option>
-                <option value="TAG I">TAG I</option>
-                <option value="NON-LOKASI">NON-LOKASI</option>
-                <option value="TELUR">TELUR</option>
-                <option value="MKT">MKT</option>
-                <option value="ATK GS">ATK GS</option>
-                <option value="MATERAI">MATERAI</option>
-            </select>
+                </select>
         </div>
         <div class="input-row"><div class="label">KD TOKO</div><input type="text" id="p_kode" placeholder="Scan/Ketik..." onchange="processStoreInput()"></div>
         <div class="input-row"><div class="label">NAMA TOKO</div><input type="text" id="p_nama" readonly></div>
@@ -296,7 +289,6 @@
         <hr style="border: 1px solid #999; margin: 15px 0;">
         <div class="input-row" id="row_scan_label"><div class="label" style="background: var(--orange);">SCAN LABEL</div><input type="text" id="p_scan_label" placeholder="Scan Label..." onchange="validateScanLabel()"></div>
         <div id="area_fisik" style="display:none; border: 2px solid var(--red); padding: 10px; border-radius: 5px; margin-bottom: 8px;">
-
             <div class="input-row"><div class="label" style="background: var(--red);">SCAN FISIK</div><input type="text" id="p_scan_fisik" placeholder="Scan Barcode Produk..." onchange="validateScanFisik()"></div>
         </div>
         <div class="input-row"><div class="label">PLU</div><input type="text" id="p_plu" readonly></div>
@@ -304,19 +296,18 @@
         <div class="input-row"><div class="label">ZONA</div><input type="text" id="p_zona" readonly></div>
         <div class="input-row"><div class="label" style="background: #2c3e50;">QTY SCAN</div><input type="number" id="p_qty_input" placeholder="0" readonly></div>
         <input type="hidden" id="p_qty_data">
-       
-</div> 
-<div class="nav-grid-container">
-    <button class="btn-nav" style="background:#2ecc71" onclick="saveData()">SIMPAN</button>
-    <button class="btn-nav" style="background:#8e44ad" onclick="showReport()">FINAL</button>
-    <button class="btn-nav" style="background:#34495e" onclick="toggleArea('HEADER')">HEADER</button>
-    
-    <button class="btn-nav" style="background:#34495e" onclick="clearAllFields()">CLEAR</button>
-    <button class="btn-nav" style="background:#2c3e50; border: 1px solid yellow; color: yellow;" onclick="showMonitoring()">MONITOR</button>
-    <button class="btn-nav" style="background:#d35400" onclick="showAntrianModal()">
-        ANTRIAN (<span id="badge_small">0</span>)
-    </button>
-</div>
+    </div>
+
+    <div class="nav-grid-container" style="margin-top: 20px;">
+        <button class="btn-nav" style="background:#2ecc71" onclick="saveData()">SIMPAN</button>
+        <button class="btn-nav" style="background:#8e44ad" onclick="showReport()">FINAL</button>
+        <button class="btn-nav" style="background:#34495e" onclick="toggleArea('HEADER')">HEADER</button>
+        <button class="btn-nav" style="background:#34495e" onclick="clearAllFields()">CLEAR</button>
+        <button class="btn-nav" style="background:#2c3e50; border: 1px solid yellow; color: yellow;" onclick="showMonitoring()">MONITOR</button>
+        <button class="btn-nav" style="background:#d35400" onclick="showAntrianModal()">
+            ANTRIAN (<span id="badge_small">0</span>)
+        </button>
+    </div>
     </div>
 
 
@@ -2117,6 +2108,19 @@ function pilihAntrian(tgl, kode, faktur, jenis) {
         // Langsung buka modal report (Final) untuk toko tersebut
         showReport();
     }, 500);
+}
+
+function toggleArea(target) {
+    const header = document.getElementById('group_header');
+    const scan = document.getElementById('group_scan');
+
+    if (target === 'HEADER') {
+        header.style.display = 'block';
+        scan.style.display = 'none';
+    } else {
+        header.style.display = 'none';
+        scan.style.display = 'block';
+    }
 }
 
 </script>
