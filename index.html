@@ -156,6 +156,34 @@
     z-index: 100;
 }
 
+.nav-grid-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* Membagi 3 kolom sama rata */
+    gap: 8px;                              /* Jarak antar tombol */
+    margin-top: 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.btn-nav {
+    height: 50px;           /* Tinggi yang nyaman untuk jempol */
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-weight: bold;
+    font-size: 11px;        /* Ukuran teks optimal */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.btn-nav:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+}
 
 </style>
 
@@ -278,15 +306,16 @@
         <input type="hidden" id="p_qty_data">
        
 </div> 
-<div class="footer">
-            <button class="btn-main" style="background:#2ecc71" onclick="saveData()">SIMPAN</button>
-            <button class="btn-main" style="background:#8e44ad" onclick="showReport()">FINAL</button>
-            <button class="btn-main" style="background:#34495e" onclick="kembaliKeHeader()">HEADER</button>
-            <button class="btn-main" style="background:#34495e" onclick="clearAllFields()">CLEAR</button>
-            <button class="btn-main" style="background:#2c3e50; border: 1px solid yellow; color: yellow;" onclick="showMonitoring()">MONITOR</button>
-            </div>
-<div onclick="showAntrianModal()" class="antrian-footer">
-    📦 KLIK LIHAT ANTRIAN: <span id="badge" style="font-weight:bold; font-size:14px;">0</span> ITEM
+<div class="nav-grid-container">
+    <button class="btn-nav" style="background:#2ecc71" onclick="saveData()">SIMPAN</button>
+    <button class="btn-nav" style="background:#8e44ad" onclick="showReport()">FINAL</button>
+    <button class="btn-nav" style="background:#34495e" onclick="toggleArea('HEADER')">HEADER</button>
+    
+    <button class="btn-nav" style="background:#34495e" onclick="clearAllFields()">CLEAR</button>
+    <button class="btn-nav" style="background:#2c3e50; border: 1px solid yellow; color: yellow;" onclick="showMonitoring()">MONITOR</button>
+    <button class="btn-nav" style="background:#d35400" onclick="showAntrianModal()">
+        ANTRIAN (<span id="badge_small">0</span>)
+    </button>
 </div>
     </div>
 
