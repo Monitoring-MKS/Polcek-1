@@ -396,7 +396,7 @@ window.onbeforeunload = function(e) {
 
 const G_GITHUB_URL = "https://raw.githubusercontent.com/Monitoring-MKS/Polcek-1/refs/heads/main/database_polcek.json";
 
-const G_URL = "https://script.google.com/macros/s/AKfycbzkUKz9_CrCePw3o59YCSKGnKuGo42aR3-FOlod0vUeYewoVfSWJsQJXADT4-QGNQ/exec";
+const G_URL = "https://script.google.com/macros/s/AKfycbyI5ekR9VqO9YYKgveHwpzSzCN4T6Id_flshXi5Qbl9tGBZ_yllN5eXg4UFJZ7DtHo/exec";
 
 let dbPickAuto = [];
 let dbMasterBarcode = [];
@@ -1137,18 +1137,21 @@ function afterSaveFocus(jenis) {
     }
 }
 
-    async function prosesFinalisasi() {
+async function prosesFinalisasi() {
     const jenisAktif = document.getElementById('p_jenis').value;
     const fakturAktif = document.getElementById('p_faktur').value;
     const kodeAktif = document.getElementById('p_kode').value;
 
     document.getElementById('modal_report').style.display = 'none';
 
+    // Konfirmasi sebelum kirim
     const { isConfirmed } = await Swal.fire({ 
         title: 'Kirim Data?', 
-        text: "Pastikan semua item sudah ter-scan dengan benar",
+        text: "Data akan langsung terkirim ke GSheet",
         icon: 'question', 
-        showCancelButton: true 
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Kirim!',
+        cancelButtonText: 'Cek Lagi'
     });
 
     if (isConfirmed) {
@@ -1156,10 +1159,11 @@ function afterSaveFocus(jenis) {
         loader.style.display = 'flex'; 
 
         try {
+            // 1. Ambil data dari antrean lokal
             let allLocalData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-            // Ambil data yang sesuai dengan faktur yang sedang diproses
             const dataToSend = allLocalData.filter(i => i.jenis === jenisAktif && i.faktur === fakturAktif && i.kode === kodeAktif);
 
+            // 2. Kirim ke G_URL (Google Apps Script)
             const res = await fetch(G_URL, { 
                 method: 'POST', 
                 body: JSON.stringify({ action: "syncBatch", data: dataToSend }) 
@@ -1169,27 +1173,39 @@ function afterSaveFocus(jenis) {
             loader.style.display = 'none'; 
 
             if (out.status === "success") {
-                // 1. Bersihkan antrean (Queue) di LocalStorage
+                // 3. Hapus data yang sudah terkirim dari antrean LocalStorage
                 const sisaData = allLocalData.filter(i => !(i.jenis === jenisAktif && i.faktur === fakturAktif && i.kode === kodeAktif));
                 localStorage.setItem('q_polcek', JSON.stringify(sisaData));
-                updateBadge();
-
-                // 2. Update cache RAM monitoring (PENTING: Jangan simpan JSON besar ke LocalStorage lagi)
+                
+                // 4. UPDATE MONITORING LOKAL (Agar langsung centang hijau ✅ di HP petugas)
                 dataToSend.forEach(d => dbSudahPolcek.push(d)); 
+                
+                updateBadge(); // Update angka antrean di UI
 
-                await Swal.fire({
-                    icon: 'success',
-                    title: 'Terkirim!',
-                    text: 'Data GSheet & GitHub sedang diperbaharui',
-                    timer: 1500
+                // 5. TOAST SUCCESS (Cepat & Tanpa Jeda)
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    timerProgressBar: true
                 });
                 
+                Toast.fire({
+                    icon: 'success',
+                    title: 'Data Terkirim ke GSheet'
+                });
+
+                // 6. Reset Form untuk faktur berikutnya
                 clearAllFieldsInternal(); 
+                
+            } else {
+                throw new Error(out.message);
             }
 
         } catch (e) { 
             loader.style.display = 'none';
-            Swal.fire("Gagal", "Koneksi Terputus. Data masih tersimpan di antrean HP.", "error"); 
+            Swal.fire("Gagal Kirim", "Koneksi bermasalah. Data tetap aman di antrean HP.", "error"); 
             document.getElementById('modal_report').style.display = 'block';
         }
     } else {
