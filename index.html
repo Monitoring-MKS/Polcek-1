@@ -551,43 +551,34 @@ async function loadInitialData() {
 
     console.log("Memulai penarikan data dari GitHub...");
 
-    try {
-        // 2. Gunakan G_GITHUB_URL dan metode GET (default fetch adalah GET)
-        const res = await fetch(G_GITHUB_URL); 
+try {
+        const res = await fetch(G_GITHUB_URL);
+        if (!res.ok) throw new Error("Gagal ambil data GitHub");
         
-        if (!res.ok) throw new Error("File GitHub tidak ditemukan / URL Salah");
-
         const out = await res.json();
-        console.log("Data diterima dari GitHub:", out);
-
-        // 3. Masukkan ke variabel global agar aplikasi bisa mencari data
+        
         dbPickAuto = out.pickAuto || [];
         dbMasterBarcode = out.masterBarcode || [];
         dbManual = out.dataManual || [];
         dbSudahPolcek = out.dataSudahPolcek || [];
 
-        // 4. Simpan cadangan ke LocalStorage
-        localStorage.setItem("db_pick_auto", JSON.stringify(dbPickAuto));
-        localStorage.setItem("db_master_barcode", JSON.stringify(dbMasterBarcode));
+        // 🔥 HAPUS ATAU KOMENTARI BARIS DI BAWAH INI:
+        // localStorage.setItem("db_pick_auto", JSON.stringify(dbPickAuto));
+        // localStorage.setItem("db_master_barcode", JSON.stringify(dbMasterBarcode));
+        
+        console.log("Data GitHub berhasil dimuat ke RAM!");
 
     } catch (e) {
-        console.error("Gagal sinkron GitHub:", e);
-        
-        // 5. Fallback: Ambil dari memori HP jika internet mati
-        dbPickAuto = JSON.parse(localStorage.getItem("db_pick_auto") || "[]");
-        dbMasterBarcode = JSON.parse(localStorage.getItem("db_master_barcode") || "[]");
-
+        console.error("Gagal tarik GitHub", e);
+        // Jika gagal, biarkan variabel kosong atau ambil dari cache RAM jika ada
         Swal.fire({
             icon: 'warning',
-            title: 'Koneksi Gagal',
-            text: 'Menggunakan data lama dari memori HP.',
+            title: 'Koneksi Bermasalah',
+            text: 'Gagal update data terbaru dari GitHub.',
             timer: 2000
         });
     } finally {
-        // 6. MATIKAN LOADING (Ini yang paling penting agar tidak macet)
-        if (loader) loader.style.display = 'none';
-        
-        // Update tampilan badge antrian jika ada
+        if (loader) loader.style.display = 'none';        
         if (typeof updateBadge === "function") updateBadge();
         
         console.log("Proses loading selesai.");
