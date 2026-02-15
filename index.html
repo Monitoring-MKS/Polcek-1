@@ -396,7 +396,7 @@ window.onbeforeunload = function(e) {
 
 const G_GITHUB_URL = "https://raw.githubusercontent.com/Monitoring-MKS/Polcek-1/refs/heads/main/database_polcek.json";
 
-const G_URL = "https://script.google.com/macros/s/AKfycbyKITLpCz3B93fX7vMFQ-vQDuy2ESusypPXtc-_DOdS2KfBD6lj6tMiihltbaFOYdE/exec";
+const G_URL = "https://script.google.com/macros/s/AKfycbzkUKz9_CrCePw3o59YCSKGnKuGo42aR3-FOlod0vUeYewoVfSWJsQJXADT4-QGNQ/exec";
 
 let dbPickAuto = [];
 let dbMasterBarcode = [];
@@ -540,7 +540,7 @@ async function initApp() {
     { nik: "23120912", nama: "HAMKA", pass: "234" },
     { nik: "20085631", nama: "ABU BAKAR", pass: "234" },
     { nik: "23072735", nama: "FIRMAN", pass: "234" },
-    { nik: "21045428", nama: "RISAL", pass: "234" }
+    { nik: "21045428", nama: "RISAL", pass: "234" },
 
 ];
 
@@ -951,7 +951,7 @@ function validateScanLabel() {
             document.getElementById('p_qty_input').value = 1; 
             document.getElementById('p_qty_input').readOnly = true;
             document.getElementById('p_scan_label').value = scanVal.toUpperCase();
-            setTimeout(() => { saveData(); }, 100);
+            setTimeout(() => { saveData(); }, 300);
         } else { 
             if (typeof playError === "function") playError();
             notify(" NO KONTAINER TIDAK ADA DI DATA!", "error", "p_scan_label"); 
@@ -1067,7 +1067,7 @@ localStorage.setItem('q_polcek', JSON.stringify(q));
 
 async function kirimDataLangsung(data) {
     const loader = document.getElementById('loader');
-    loader.style.display = 'flex'; // Loader jalan
+    loader.style.display = 'flex'; 
     
     try {
         const res = await fetch(G_URL, { 
@@ -1076,12 +1076,19 @@ async function kirimDataLangsung(data) {
         });
         const out = await res.json();
         
-        // POINT 10: TUTUP LOADER DULU SEBELUM POP-UP BERHASIL
         loader.style.display = 'none'; 
         
         if (out.status === "success") {
-            await Swal.fire("Berhasil", "Data Non-Scan Terkirim!", "success");
-            clearAllFieldsInternal(); // Reset semua kolom (Point 9)
+            // Update data monitoring di RAM agar langsung muncul di tabel tanpa reload
+            data.forEach(d => dbSudahPolcek.push(d)); 
+            
+            await Swal.fire({
+                icon: 'success',
+                title: 'Berhasil',
+                text: 'Data Non-Scan Terkirim!',
+                timer: 1500 // Pop up hilang otomatis agar cepat
+            });
+            clearAllFieldsInternal(); 
         }
     } catch (e) {
         loader.style.display = 'none';
@@ -1139,6 +1146,7 @@ function afterSaveFocus(jenis) {
 
     const { isConfirmed } = await Swal.fire({ 
         title: 'Kirim Data?', 
+        text: "Pastikan semua item sudah ter-scan dengan benar",
         icon: 'question', 
         showCancelButton: true 
     });
@@ -1149,32 +1157,39 @@ function afterSaveFocus(jenis) {
 
         try {
             let allLocalData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+            // Ambil data yang sesuai dengan faktur yang sedang diproses
             const dataToSend = allLocalData.filter(i => i.jenis === jenisAktif && i.faktur === fakturAktif && i.kode === kodeAktif);
 
-     const res = await fetch(G_URL, { method: 'POST', body: JSON.stringify({ action: "syncBatch", data: dataToSend }) });
-const out = await res.json();
-    
-    // POINT 10: PASTIKAN LOADER HILANG DI SINI
-    loader.style.display = 'none'; 
+            const res = await fetch(G_URL, { 
+                method: 'POST', 
+                body: JSON.stringify({ action: "syncBatch", data: dataToSend }) 
+            });
+            const out = await res.json();
+            
+            loader.style.display = 'none'; 
 
-    if (out.status === "success") {
-        const sisaData = allLocalData.filter(i => !(i.jenis === jenisAktif && i.faktur === fakturAktif && i.kode === kodeAktif));
-        localStorage.setItem('q_polcek', JSON.stringify(sisaData));
-        updateBadge();
+            if (out.status === "success") {
+                // 1. Bersihkan antrean (Queue) di LocalStorage
+                const sisaData = allLocalData.filter(i => !(i.jenis === jenisAktif && i.faktur === fakturAktif && i.kode === kodeAktif));
+                localStorage.setItem('q_polcek', JSON.stringify(sisaData));
+                updateBadge();
 
-        // --- TAMBAHKAN DI SINI (SEBELUM SWAL) ---
-        // Update cache lokal supaya Monitoring Real-time (Point 2)
-        dataToSend.forEach(d => dbSudahPolcek.push(d)); 
-        localStorage.setItem("db_sudah_polcek", JSON.stringify(dbSudahPolcek));
-        // ----------------------------------------
+                // 2. Update cache RAM monitoring (PENTING: Jangan simpan JSON besar ke LocalStorage lagi)
+                dataToSend.forEach(d => dbSudahPolcek.push(d)); 
 
-        await Swal.fire("Berhasil", "Data Terkirim!", "success");
-        clearAllFieldsInternal(); // Reset total
-    }
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Terkirim!',
+                    text: 'Data GSheet & GitHub sedang diperbaharui',
+                    timer: 1500
+                });
+                
+                clearAllFieldsInternal(); 
+            }
 
         } catch (e) { 
             loader.style.display = 'none';
-            Swal.fire("Gagal", "Koneksi Terputus", "error"); 
+            Swal.fire("Gagal", "Koneksi Terputus. Data masih tersimpan di antrean HP.", "error"); 
             document.getElementById('modal_report').style.display = 'block';
         }
     } else {
@@ -1421,33 +1436,29 @@ function renderMonitorTable(dataMap) {
 
 async function sinkronDataServer() {
     try {
-        // Gunakan link Raw GitHub Anda
-        const GITHUB_RAW = `https://raw.githubusercontent.com/${GH_REPO_NAME}/main/database_polcek.json?t=${new Date().getTime()}`;
-        
-        const res = await fetch(GITHUB_RAW);
-        const db = await res.json();
-        
-        // Simpan ke variabel global
-        dbSudahPolcek = db.sudahPolcek.map(item => ({
-            tgl: item.TGL_PROSES,
-            kode: item.KD_STORE,
-            jenis: item.JENIS,
-            qty_scan: item.QTY_SCAN,
-            keterangan: item.KETERANGAN,
-            petugas: item.PETUGAS
-        }));
+        // Gunakan G_GITHUB_URL yang sudah Anda definisikan di atas
+        const res = await fetch(G_GITHUB_URL + "?t=" + new Date().getTime());
+        if (!res.ok) throw new Error("Gagal ambil data GitHub");
 
-        // Master data juga bisa diambil dari sini jika perlu
-        // dbPickAuto = db.pickAuto;
+        const out = await res.json();
         
-        console.log("Monitoring Updated via GitHub!");
-        if (typeof renderMonitorTable === "function") renderMonitorTable();
+        // Update variabel global
+        dbSudahPolcek = out.dataSudahPolcek || [];
+        
+        console.log("Sinkronisasi Realtime Berhasil. Data scan terupdate.");
+        
+        // PENTING: Nama fungsi harus renderMonitorTable (sesuai kode Anda)
+        // Kita tidak memanggil render di sini karena showMonitoring akan memanggilnya nanti
+        // Tapi jika Anda ingin tombol refresh sendiri, gunakan pengecekan ini:
+        if (typeof renderMonitorTable === "function" && document.getElementById('modal_monitor').style.display === 'block') {
+             // Re-render jika modal sedang terbuka
+             showMonitoring(); 
+        }
 
     } catch (e) {
-        console.error("Gagal ambil JSON GitHub:", e);
+        console.error("Gagal sinkron data server:", e);
     }
 }
-
 async function revisiQty(index) {
     // 1. Ambil data asli dari LocalStorage
     let allData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
