@@ -396,7 +396,7 @@ window.onbeforeunload = function(e) {
 
 const G_GITHUB_URL = "https://raw.githubusercontent.com/Monitoring-MKS/Polcek-1/refs/heads/main/database_polcek.json";
 
-const G_URL = "https://script.google.com/macros/s/AKfycbwhf1mpw5XZVAraUwHVTGJSIBHlOvpXRpcwr2OXTzWuJvQOnVQwF9mlJ3EQVKpnFWo/exec";
+const G_URL = "https://script.google.com/macros/s/AKfycbz4xtQF8yZFd_EUXUPm6Lj5lAJ92emNYrRb_UlM_s4XI70NUAjKfzKexqj4gEyB2Fw/exec";
 
 let dbPickAuto = [];
 let dbMasterBarcode = [];
@@ -582,6 +582,7 @@ try {
         if (typeof updateBadge === "function") updateBadge();
         
         console.log("Proses loading selesai.");
+updateBadge();
     }
 }
     // ==========================================
@@ -1144,89 +1145,105 @@ async function prosesFinalisasi() {
 
     document.getElementById('modal_report').style.display = 'none';
 
-    // Konfirmasi sebelum kirim
     const { isConfirmed } = await Swal.fire({ 
         title: 'Kirim Data?', 
-        text: "Data akan langsung terkirim ke GSheet",
+        text: "Data akan masuk ke GSheet & Monitoring",
         icon: 'question', 
         showCancelButton: true,
         confirmButtonText: 'Ya, Kirim!',
         cancelButtonText: 'Cek Lagi'
     });
 
-    if (isConfirmed) {
-        const loader = document.getElementById('loader');
-        loader.style.display = 'flex'; 
+    if (!isConfirmed) {
+        document.getElementById('modal_report').style.display = 'block';
+        return;
+    }
 
-        try {
-            // 1. Ambil data dari antrean lokal
-            let allLocalData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-            const dataToSend = allLocalData.filter(i => i.jenis === jenisAktif && i.faktur === fakturAktif && i.kode === kodeAktif);
+    const loader = document.getElementById('loader');
+    loader.style.display = 'flex'; 
 
-            // 2. Kirim ke G_URL (Google Apps Script)
-            const res = await fetch(G_URL, { 
-                method: 'POST', 
-                body: JSON.stringify({ action: "syncBatch", data: dataToSend }) 
+    try {
+        // 1. Ambil data dari antrean lokal
+        let allLocalData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+        const dataToSend = allLocalData.filter(i => i.jenis === jenisAktif && i.faktur === fakturAktif && i.kode === kodeAktif);
+
+        if (dataToSend.length === 0) throw new Error("Tidak ada data untuk dikirim");
+
+        // 2. Kirim ke G_URL dengan header text/plain (KUNCI AGAR TIDAK ERROR CORS)
+        const res = await fetch(G_URL, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: "syncBatch", data: dataToSend }) 
+        });
+        
+        const out = await res.json();
+        
+        // MATIKAN LOADING SEGERA SETELAH RESPON DITERIMA
+        loader.style.display = 'none'; 
+
+        if (out.status === "success") {
+            // 3. Update Monitoring Lokal (Optimistic)
+            // Ini agar di tabel monitoring langsung muncul ✅
+            dataToSend.forEach(d => {
+                dbSudahPolcek.push({
+                    ...d,
+                    tgl: d.tgl || new Date().toISOString()
+                });
             });
-            const out = await res.json();
+
+            // 4. Hapus dari LocalStorage
+            const sisaData = allLocalData.filter(i => !(i.jenis === jenisAktif && i.faktur === fakturAktif && i.kode === kodeAktif));
+            localStorage.setItem('q_polcek', JSON.stringify(sisaData));
             
-            loader.style.display = 'none'; 
+            updateBadge(); // Update badge antrean
 
-            if (out.status === "success") {
-                // 3. Hapus data yang sudah terkirim dari antrean LocalStorage
-                const sisaData = allLocalData.filter(i => !(i.jenis === jenisAktif && i.faktur === fakturAktif && i.kode === kodeAktif));
-                localStorage.setItem('q_polcek', JSON.stringify(sisaData));
-                
-                // 4. UPDATE MONITORING LOKAL (Agar langsung centang hijau ✅ di HP petugas)
-                dataToSend.forEach(d => dbSudahPolcek.push(d)); 
-                
-                updateBadge(); // Update angka antrean di UI
+            // 5. Reset Form dan kembali ke halaman utama
+            clearAllFieldsInternal(); 
 
-                // 5. TOAST SUCCESS (Cepat & Tanpa Jeda)
-                const Toast = Swal.mixin({
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 1500,
-                    timerProgressBar: true
-                });
-                
-                Toast.fire({
-                    icon: 'success',
-                    title: 'Data Terkirim ke GSheet'
-                });
+            // 6. Notifikasi Sukses Singkat
+            Swal.fire({
+                icon: 'success',
+                title: 'Terkirim!',
+                timer: 1000,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
 
-                // 6. Reset Form untuk faktur berikutnya
-                clearAllFieldsInternal(); 
-                
-            } else {
-                throw new Error(out.message);
-            }
+            setTimeout(() => {
+                const inputJenis = document.getElementById('p_jenis');
+                if (inputJenis) {
+                    inputJenis.focus();
+                    // Jika ingin otomatis membuka dropdown (untuk beberapa browser):
+                    inputJenis.click(); 
+                }
+            }, 500);
+            
+        
 
-        } catch (e) { 
-            loader.style.display = 'none';
-            Swal.fire("Gagal Kirim", "Koneksi bermasalah. Data tetap aman di antrean HP.", "error"); 
-            document.getElementById('modal_report').style.display = 'block';
+        } else {
+            throw new Error(out.message || "Gagal simpan di server");
         }
-    } else {
+
+    } catch (e) { 
+        if (loader) loader.style.display = 'none';
+        console.error(e);
+        Swal.fire("Gagal Kirim", "Koneksi bermasalah atau Server Sibuk. Data tetap aman di antrean HP.", "error"); 
         document.getElementById('modal_report').style.display = 'block';
     }
 }
 
 function clearAllFieldsInternal() {
-    // Kosongkan Jenis (kembali ke --PILIH JENIS--)
-    document.getElementById('p_jenis').value = "";
-    // Kosongkan semua field input
-    const ids = ['p_kode','p_nama','p_urpick','p_faktur','p_scan_label','p_scan_fisik','p_plu','p_descp','p_zona','p_qty_input','p_qty_data'];
-    ids.forEach(id => {
-        const el = document.getElementById(id);
-        if(el) {
-            if(el.tagName === "SELECT") el.innerHTML = '<option value="">-- PILIH --</option>';
-            else el.value = "";
-        }
-    });
-    // Fokus ke Jenis sesuai permintaan point 9
-    setFocus('p_jenis');
+    // Tanggal dan Jenis TIDAK dikosongkan agar kerja lebih cepat
+    document.getElementById('p_kode').value = "";
+    document.getElementById('p_nama').value = "";
+    document.getElementById('p_urpick').value = "";
+    document.getElementById('p_faktur').value = "";
+    
+    // Langsung arahkan fokus ke Kode Toko jika Jenis sudah ada
+    document.getElementById('p_kode').focus(); 
+    
+    toggleArea('HEADER');
 }
 
     // ==========================================
@@ -1244,14 +1261,24 @@ function clearAllFieldsInternal() {
     }
 
     function updateBadge() {
-    try {
-        const scanDB = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-        const badgeEl = document.getElementById('badge');
-        if (badgeEl) {
-            badgeEl.innerText = scanDB.length;
-        }
-    } catch (e) {
-        console.error("Gagal update badge", e);
+    // 1. Ambil data antrean dari LocalStorage
+    const allLocalData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+    
+    // 2. Hitung jumlah toko (faktur unik) dalam antrean
+    // Menggunakan Set agar jika 1 toko punya banyak item scan, tetap dihitung 1 antrean toko
+    const uniqueFakturs = [...new Set(allLocalData.map(item => item.faktur))];
+    const jumlahAntrean = uniqueFakturs.length;
+
+    // 3. Update angka di Badge Besar (Sticky Badge bawah)
+    const badgeBesar = document.getElementById('antrian_badge');
+    if (badgeBesar) {
+        badgeBesar.innerText = jumlahAntrean > 0 ? `ANTREAN: ${jumlahAntrean} TOKO` : "BELUM ADA ANTREAN";
+    }
+
+    // 4. Update angka di Tombol Navigasi (badge_small)
+    const badgeKecil = document.getElementById('badge_small');
+    if (badgeKecil) {
+        badgeKecil.innerText = jumlahAntrean;
     }
 }
 
@@ -1451,30 +1478,41 @@ function renderMonitorTable(dataMap) {
     }
 
 async function sinkronDataServer() {
+    const loader = document.getElementById('loader');
+    if (loader) loader.style.display = 'flex'; // Mulai Loading
+
     try {
-        // Gunakan G_GITHUB_URL yang sudah Anda definisikan di atas
+        // Tambahkan ?t= agar tidak ambil data lama dari cache browser
         const res = await fetch(G_GITHUB_URL + "?t=" + new Date().getTime());
-        if (!res.ok) throw new Error("Gagal ambil data GitHub");
+        if (!res.ok) throw new Error("GitHub sedang sibuk");
 
         const out = await res.json();
-        
-        // Update variabel global
         dbSudahPolcek = out.dataSudahPolcek || [];
-        
-        console.log("Sinkronisasi Realtime Berhasil. Data scan terupdate.");
-        
-        // PENTING: Nama fungsi harus renderMonitorTable (sesuai kode Anda)
-        // Kita tidak memanggil render di sini karena showMonitoring akan memanggilnya nanti
-        // Tapi jika Anda ingin tombol refresh sendiri, gunakan pengecekan ini:
-        if (typeof renderMonitorTable === "function" && document.getElementById('modal_monitor').style.display === 'block') {
-             // Re-render jika modal sedang terbuka
-             showMonitoring(); 
-        }
-
+        console.log("Data Berhasil Sinkron");
     } catch (e) {
-        console.error("Gagal sinkron data server:", e);
+        console.warn("Gagal ambil dari GitHub, mencoba ambil langsung dari GSheet...");
+        // Jika GitHub gagal, langsung tembak GSheet agar tidak loading selamanya
+        await ambilDataLangsungGSheet();
+    } finally {
+        if (loader) loader.style.display = 'none'; // WAJIB MATI DI SINI
     }
 }
+
+async function ambilDataLangsungGSheet() {
+    try {
+        const res = await fetch(G_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "getMonitoring" })
+        });
+        const out = await res.json();
+        if (out.status === "success") {
+            dbSudahPolcek = out.dataSudahPolcek || [];
+        }
+    } catch (err) {
+        console.error("GSheet juga gagal:", err);
+    }
+}
+
 async function revisiQty(index) {
     // 1. Ambil data asli dari LocalStorage
     let allData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
@@ -1662,7 +1700,6 @@ function showReport() {
     }
 
     // --- BAGIAN RIWAYAT (LIST ANTRIAN) ---
-    // Dipindah ke elemen list_antrian (jika ada di dalam modal)
     const listAntrian = document.getElementById('list_antrian');
     if (listAntrian) {
         listAntrian.innerHTML = "";
