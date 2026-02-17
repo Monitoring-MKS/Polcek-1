@@ -767,23 +767,28 @@ function toggleKeScan() {
     }
 }
 
-function hitungTotalTerScan(plu, faktur) {
+function hitungTotalTerScan(plu, faktur, kode, jenis) {
     let total = 0;
 
-    // 1. Cek di Database yang sudah terkirim (hasil sinkronisasi server)
-    // Pastikan variabel dbSudahPolcek ada di aplikasi Anda
+    // 1. Cek di Database yang sudah terkirim (Server/GitHub)
     if (typeof dbSudahPolcek !== 'undefined' && dbSudahPolcek.length > 0) {
         dbSudahPolcek.forEach(d => {
-            if (String(d.plu).trim() === String(plu).trim() && d.faktur === faktur) {
+            if (String(d.plu).trim() === String(plu).trim() && 
+                String(d.faktur).trim() === String(faktur).trim() &&
+                String(d.kode).trim() === String(kode).trim() && // Tambah validasi Kode Toko
+                String(d.jenis).trim() === String(jenis).trim()) { // Tambah validasi Jenis
                 total += parseInt(d.qty_scan || 0);
             }
         });
     }
 
-    // 2. Cek di Antrian Lokal (LocalStorage) yang belum di-finalisasi
+    // 2. Cek di Antrian Lokal (LocalStorage)
     let antrian = JSON.parse(localStorage.getItem('q_polcek') || "[]");
     antrian.forEach(a => {
-        if (String(a.plu).trim() === String(plu).trim() && a.faktur === faktur) {
+        if (String(a.plu).trim() === String(plu).trim() && 
+            String(a.faktur).trim() === String(faktur).trim() &&
+            String(a.kode).trim() === String(kode).trim() && // Tambah validasi Kode Toko
+            String(a.jenis).trim() === String(jenis).trim()) { // Tambah validasi Jenis
             total += parseInt(a.qty_scan || 0);
         }
     });
