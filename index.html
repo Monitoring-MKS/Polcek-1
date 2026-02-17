@@ -860,7 +860,7 @@ function validateScanFisik() {
 
         if (matchPicking) {
             // CEK APAKAH SUDAH TERPENUHI SEBELUM FILL DATA
-            let sudahTerpenuhi = hit6ungTotalTerScan(foundPLU, fakturVal, kodeToko, jenisVal);
+            let sudahTerpenuhi = hitungTotalTerScan(foundPLU, fakturVal, kodeToko, jenisVal);
             // Ambil target qty asli dari picking
             let targetAsli = parseInt(matchPicking.qtyData || 0);
 
