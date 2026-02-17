@@ -817,7 +817,7 @@ function validateScanFisik() {
 
         if (matchLanjutan) {
             // HITUNG AKUMULASI (Server + Antrian Lokal)
-            let sudahAda = hitungTotalTerScan(pluAktif, fakturVal); 
+            let sudahAda = hitungTotalTerScan(pluAktif, fakturVal, kodeToko, jenisVal); 
             let sedangInput = parseInt(qtyInp.value) || 0;
 
             // VALIDASI OVER QTY (Termasuk cek server)
@@ -860,7 +860,7 @@ function validateScanFisik() {
 
         if (matchPicking) {
             // CEK APAKAH SUDAH TERPENUHI SEBELUM FILL DATA
-            let sudahTerpenuhi = hitungTotalTerScan(foundPLU, fakturVal);
+            let sudahTerpenuhi = hit6ungTotalTerScan(foundPLU, fakturVal, kodeToko, jenisVal);
             // Ambil target qty asli dari picking
             let targetAsli = parseInt(matchPicking.qtyData || 0);
 
