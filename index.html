@@ -279,7 +279,7 @@
                 <option value="DOS">DOS</option>
             <option value="MANUAL">MANUAL</option>
             <option value="TAG I">TAG I</option>
-            <option value="NON-LOKASI">NON-LOKASI</option>
+            <option value="NON-PTL">NON-PTL</option>
             <option value="TELUR">TELUR</option>
             <option value="MKT">MKT</option>
             <option value="ATK GS">ATK GS</option>
@@ -674,7 +674,7 @@ function aktifkanFullScreen() {
 
 function handleJenisChange() {
     const jenis = document.getElementById('p_jenis').value;
-    const kelompokNonScan = ["NON-LOKASI", "TELUR", "MKT", "ATK GS", "MATERAI"];
+    const kelompokNonScan = ["NON-PTL", "TELUR", "MKT", "ATK GS", "MATERAI"];
     const areaFisik = document.getElementById('area_fisik');
     const rowScanLabel = document.getElementById('row_scan_label');
     const qtyInp = document.getElementById('p_qty_input');
@@ -705,7 +705,7 @@ function handleJenisChange() {
 function toggleKeScan() {
     const jenis = document.getElementById('p_jenis').value;
     const faktur = document.getElementById('p_faktur').value;
-    const kelompokNonScan = ["NON-LOKASI", "TELUR", "MKT", "ATK GS", "MATERAI"];
+    const kelompokNonScan = ["NON-PTL", "TELUR", "MKT", "ATK GS", "MATERAI"];
     
     if (!faktur) return;
 
@@ -1016,7 +1016,7 @@ const petugasAktif = currentUser || localStorage.getItem('activeUser') || "Tanpa
     
     if (!qtyInp.value || qtyInp.value <= 0) return notify("Isi Qty!", "error", "p_qty_input");
 
-    const kelompokNonScan = ["NON-LOKASI","TELUR", "MKT", "ATK GS", "MATERAI"];
+    const kelompokNonScan = ["NON-PTL","TELUR", "MKT", "ATK GS", "MATERAI"];
    updateBadge(); 
     // Jika masuk kelompok NON-SCAN, langsung kirim ke server (Point 9)
     if (kelompokNonScan.includes(jenis)) {
@@ -1103,7 +1103,7 @@ async function kirimDataLangsung(data) {
 }
 
 function afterSaveFocus(jenis) {
-    const kelompokNonScan = ["NON-LOKASI", "TELUR", "MKT", "ATK GS", "MATERAI"];
+    const kelompokNonScan = ["NON-PTL", "TELUR", "MKT", "ATK GS", "MATERAI"];
 
     // 1. Reset field input
     ['p_scan_label', 'p_scan_fisik', 'p_plu', 'p_descp', 'p_zona', 'p_qty_input', 'p_qty_data'].forEach(id => {
