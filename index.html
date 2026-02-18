@@ -1339,41 +1339,48 @@ function clearAllFieldsInternal() {
 }
 
 async function showMonitoring() {
-    const tglRaw = document.getElementById('p_tgl').value;
+    const tglRaw = document.getElementById('p_tgl').value; // Dari input HTML
     if (!tglRaw) {
         Swal.fire("Pilih Tanggal", "Tentukan tanggal proses", "warning");
         return;
     }
 
-    // --- REALTIME: Ambil data terbaru dari server ---
     await sinkronDataServer();
 
-    document.getElementById('monitor_date').innerHTML = `TANGGAL PROSES: <span style="color: #2980b9;">${tglRaw}</span>`;
+    // Normalisasi: Ambil 10 karakter pertama, pastikan string, buang spasi
+    const tglTarget = String(tglRaw).substring(0, 10).trim();
+    
+    document.getElementById('monitor_date').innerHTML = `TANGGAL PROSES: <span style="color: #2980b9;">${tglTarget}</span>`;
 
     const clean = v => String(v || "").trim().toUpperCase();
-    const tglTarget = tglRaw.substring(0, 10);
-
     let monitorMap = {};
 
-    // 1️⃣ TARGET DARI MASTER
+    // 1️⃣ FILTER TARGET (MASTER DATA)
     const masterData = [
         ...dbPickAuto.map(d => ({ ...d, src: 'PA' })),
         ...dbManual.map(d => ({ ...d, src: 'MN' }))
     ];
 
     masterData.forEach(item => {
-        if (clean(item.tglInput) !== tglTarget) return;
+        // Ambil tgl dari property yang ada (tglInput atau tgl)
+        let tglM = item.tglInput || item.tgl; 
+        const tglMaster = String(tglM || "").substring(0, 10).trim();
+        
+        // DEBUG (Hapus jika sudah jalan): console.log(`Cek Master: ${tglMaster} vs ${tglTarget}`);
+
+        if (tglMaster !== tglTarget) return; 
+
         const kode = clean(item.kodeToko);
         if (!kode) return;
 
         if (!monitorMap[kode]) {
-            monitorMap[kode] = {
-                urpick: item.urpick || "",
-                kode: kode,
-                tKN: 0, tDS: 0, tMN: 0,
-                sKN: 0, sDS: 0, sMN: 0,
-                hasRemark: false, // Flag untuk status Paksa Final
-                petugas: [] // Untuk mencatat siapa saja yang kerja di toko ini
+            monitorMap[kode] = { 
+                urpick: item.urpick || "", 
+                kode: kode, 
+                tKN: 0, tDS: 0, tMN: 0, 
+                sKN: 0, sDS: 0, sMN: 0, 
+                hasRemark: false, 
+                petugas: [] 
             };
         }
 
@@ -1389,92 +1396,85 @@ async function showMonitoring() {
         }
     });
 
-    // 2️⃣ REALISASI DARI SCAN (dbSudahPolcek)
+// 2️⃣ REALISASI DARI SCAN (dbSudahPolcek)
     dbSudahPolcek.forEach(s => {
-        const tglScan = clean(s.tgl).substring(0, 10);
-        if (tglScan !== tglTarget) return;
+        const tglScan = String(s.tgl || "").substring(0, 10).trim();
+        if (tglScan !== tglTarget) return; 
 
         const kode = clean(s.kode);
         const jenis = clean(s.jenis);
-        const qty = parseInt(s.qty_scan || 0);
-        const ket = clean(s.keterangan);
         const pgw = s.petugas || "Anonim";
 
-        if (!kode) return;
+        if (monitorMap[kode]) {
+            // Update QTY Realisasi
+            if (jenis === "KONTAINER") {
+                monitorMap[kode].sKN += parseInt(s.qty_scan || 0);
+                // Catat petugas khusus Kontainer
+                if (!monitorMap[kode].uKN) monitorMap[kode].uKN = [];
+                if (!monitorMap[kode].uKN.includes(pgw)) monitorMap[kode].uKN.push(pgw);
+            } 
+            else if (jenis === "DOS") {
+                monitorMap[kode].sDS += parseInt(s.qty_scan || 0);
+                // Catat petugas khusus Dos
+                if (!monitorMap[kode].uDS) monitorMap[kode].uDS = [];
+                if (!monitorMap[kode].uDS.includes(pgw)) monitorMap[kode].uDS.push(pgw);
+            } 
+            else if (jenis === "MANUAL") {
+                monitorMap[kode].sMN += parseInt(s.qty_scan || 0);
+                // Catat petugas khusus Manual
+                if (!monitorMap[kode].uMN) monitorMap[kode].uMN = [];
+                if (!monitorMap[kode].uMN.includes(pgw)) monitorMap[kode].uMN.push(pgw);
+            }
 
-        if (!monitorMap[kode]) {
-            monitorMap[kode] = { urpick: "", kode: kode, tKN: 0, tDS: 0, tMN: 0, sKN: 0, sDS: 0, sMN: 0, hasRemark: false, petugas: [] };
+            if (clean(s.keterangan) !== "") monitorMap[kode].hasRemark = true;
         }
-
-        // Hitung Realisasi
-        if (jenis === "KONTAINER") monitorMap[kode].sKN += qty;
-        else if (jenis === "DOS") monitorMap[kode].sDS += qty;
-        else if (jenis === "MANUAL") monitorMap[kode].sMN += qty;
-
-        // Cek apakah ada keterangan (Paksa Final)
-        if (ket !== "") monitorMap[kode].hasRemark = true;
-
-        // Catat petugas (unik)
-        if (!monitorMap[kode].petugas.includes(pgw)) monitorMap[kode].petugas.push(pgw);
     });
 
     renderMonitorTable(monitorMap);
     document.getElementById('modal_monitor').style.display = 'block';
 }
 
-
 function renderMonitorTable(dataMap) {
     const container = document.getElementById('monitor_content');
-    let html = `<table class="table-monitor" style="width:100%; border-collapse:collapse; font-size:12px;">
+    let html = `<table class="table-monitor" style="width:100%; border-collapse:collapse; font-size:11px;">
         <thead>
             <tr style="background:#2c3e50; color:white;">
                 <th>URPICK</th>
                 <th>TOKO</th>
-                <th>KN (T/S)</th>
-                <th>DS (T/S)</th>
-                <th>MN (T/S)</th>
-                <th>USER</th>
+                <th>KN (T/S)<br><small>USER</small></th>
+                <th>DS (T/S)<br><small>USER</small></th>
+                <th>MN (T/S)<br><small>USER</small></th>
                 <th>STAT</th>
             </tr>
         </thead>
         <tbody>`;
 
     Object.values(dataMap).forEach(d => {
-        const matchKN = d.tKN === d.sKN;
-        const matchDS = d.tDS === d.sDS;
-        const matchMN = d.tMN === d.sMN;
-        const isAllMatch = matchKN && matchDS && matchMN;
-        
-        // Penentuan Status dan Warna Baris
-        let rowBg = "white";
-        let statusIcon = "⏳";
-        
-        if (isAllMatch) {
-            rowBg = "#d4edda"; // Hijau (Match Sempurna)
-            statusIcon = "✅";
-        } else if (d.hasRemark) {
-            rowBg = "#ffeeba"; // Oranye/Kuning (Paksa Final/Ada Keterangan)
-            statusIcon = "⚠️";
-        }
+        const isAllMatch = (d.tKN === d.sKN) && (d.tDS === d.sDS) && (d.tMN === d.sMN);
+        let rowBg = isAllMatch ? "#d4edda" : (d.hasRemark ? "#ffeeba" : "white");
+        let statusIcon = isAllMatch ? "✅" : (d.hasRemark ? "⚠️" : "⏳");
 
-        const formatTS = (t, s) => `<span style="color: ${t === s ? 'black' : 'red'}">${t}/${s}</span>`;
+        // Fungsi pembantu untuk format angka dan list petugas di bawahnya
+        const formatCell = (t, s, users) => {
+            const color = t === s ? 'black' : 'red';
+            const userList = (users && users.length > 0) ? `<br><span style="color:#7f8c8d; font-size:9px;">${users.join(",")}</span>` : "";
+            return `<span style="color: ${color}; font-weight:bold;">${t}/${s}</span>${userList}`;
+        };
 
         html += `
-            <tr style="background-color: ${rowBg}; border-bottom:1px solid #eee;">
+            <tr style="background-color: ${rowBg}; border-bottom:1px solid #eee; text-align:center;">
                 <td>${d.urpick}</td>
                 <td style="text-align:left"><b>${d.kode}</b></td>
-                <td>${formatTS(d.tKN, d.sKN)}</td>
-                <td>${formatTS(d.tDS, d.sDS)}</td>
-                <td>${formatTS(d.tMN, d.sMN)}</td>
-                <td style="font-size:10px; color:#555;">${d.petugas.join(", ")}</td>
-                <td title="${d.hasRemark ? 'Paksa Final dengan Keterangan' : ''}">${statusIcon}</td>
+                <td>${formatCell(d.tKN, d.sKN, d.uKN)}</td>
+                <td>${formatCell(d.tDS, d.sDS, d.uDS)}</td>
+                <td>${formatCell(d.tMN, d.sMN, d.uMN)}</td>
+                <td>${statusIcon}</td>
             </tr>`;
     });
     
     html += `</tbody></table>`;
     container.innerHTML = html;
 }
-
     function closeMonitoring() {
         document.getElementById('modal_report').style.display = 'none';
         document.getElementById('report_head').style.display = ''; 
