@@ -1720,25 +1720,23 @@ if (isComparisonType) {
         const indexAsli = scanDB.findIndex(x => x === itemDitemukan);
         const itemPunyaKet = itemDitemukan && itemDitemukan.keterangan ? itemDitemukan.keterangan : "";
 
-let status;
-        
-        // --- LOGIKA KHUSUS TAG I ---
-        if (jenis === "TAG I") {
-            // Karena TAG I hanya pendataan (target 0), maka asal ada scan (scan > 0) dianggap DONE
+        let status;
+
+if (jenis === "TAG I") {
+            // Untuk Tag I, asal sudah ada scan, langsung dianggap DONE agar bisa final
             status = r.scan > 0 ? "DONE" : "PENDING";
-        } 
-        // --- LOGIKA STANDAR (KONTAINER, DOS, MANUAL) ---
-        else if (r.target === "N/A" || r.scan === r.target) {
+        }
+
+else if (r.target === "N/A" || r.scan === r.target) {
             status = "DONE";
         } else if (itemPunyaKet !== "") {
-            status = "SELISIH";
+            status = "SELISIH"; 
         } else {
             status = (r.scan < r.target ? "PENDING" : "OVER");
         }
         
-        // Update isAllMatch: Tombol Finalisasi hanya aktif jika semua DONE atau SELISIH
-        if (status !== "DONE" && status !== "SELISIH") isAllMatch = false; 
-        
+        // Baris ini tetap (menentukan tombol final aktif/tidak)
+        if (status !== "DONE" && status !== "SELISIH") isAllMatch = false;        
         const colorBg = status === 'DONE' ? '#d4edda' : (status === 'SELISIH' ? '#ffcc80' : (status === 'PENDING' ? '#f8d7da' : '#fff3cd'));
         const displayDesc = (jenis === "KONTAINER" || !r.desc) ? "" : `<br><small>${r.desc}</small>`;
         const ketTampil = itemPunyaKet ? `<br><i style="font-size:9px; color:brown;">Ket: ${itemPunyaKet}</i>` : "";
@@ -1749,7 +1747,7 @@ let status;
             <td>${r.scan}</td>
             <td>
                 <b>${status}</b><br>
-                <button onclick="editItemAntrian('${key}')" style="font-size:10px; background:#f39c12; color:white; border:none; border-radius:3px; padding:3px 8px;">REVISI</button>
+                <button onclick="revisiQty(${indexAsli})" style="font-size:10px; background:#f39c12; color:white; border:none; border-radius:3px; padding:3px 8px;">REVISI</button>
             </td>
         </tr>`;
     });
