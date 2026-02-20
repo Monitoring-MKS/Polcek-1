@@ -957,12 +957,19 @@ function validateScanLabel() {
 
 
     // --- ALUR C: UNTUK TAG I ---
-    } else if (jenisVal === "TAG I") {
-        document.getElementById('p_plu').value = "TAG-I";
-        document.getElementById('p_qty_input').value = 1;
-        document.getElementById('p_qty_input').readOnly = false;
-        setFocus('p_qty_input');
-    }
+} else if (jenisVal === "TAG I") {
+        // Isi data minimal di form
+        document.getElementById('p_plu').value = "TAG-I";
+        document.getElementById('p_scan_label').value = scanVal || "TAG-I";
+        document.getElementById('p_descp').value = "PENDATAAN TAG I";
+        document.getElementById('p_qty_input').value = 1;
+        document.getElementById('p_qty_data').value = 0; // Tidak ada target
+        document.getElementById('p_zona').value = "-";
+
+        // Berikan notifikasi singkat bahwa data masuk antrian
+        // Lalu panggil saveData() tapi biarkan logika else yang bekerja (masuk LocalStorage)
+        setTimeout(() => { saveData(); }, 300);
+    }
 }
 
 
@@ -1688,6 +1695,21 @@ if (isComparisonType) {
                 };
             }
         });
+
+// --- 2. KHUSUS JENIS TAG I (PENDATAAN MURNI) ---
+    } else if (jenis === "TAG I") {
+        aktualData.forEach(item => {
+            // Gunakan Barcode sebagai Key agar setiap scan barcode yang berbeda muncul per baris
+            let keyTag = item.barcode || "TANPA BARCODE";
+            if (!reportMap[keyTag]) {
+                reportMap[keyTag] = { 
+                    desc: item.descp || "PENDATAAN TAG I", 
+                    target: 0, // Tag I tidak punya target
+                    scan: 0 
+                };
+            }
+            reportMap[keyTag].scan += parseInt(item.qty_scan || 0);
+        });
     }
 
     // GENERATE HTML TABEL
@@ -1698,11 +1720,23 @@ if (isComparisonType) {
         const indexAsli = scanDB.findIndex(x => x === itemDitemukan);
         const itemPunyaKet = itemDitemukan && itemDitemukan.keterangan ? itemDitemukan.keterangan : "";
 
-        let status;
-        if (r.target === "N/A" || r.scan === r.target) status = "DONE";
-        else if (itemPunyaKet !== "") status = "SELISIH"; 
-        else status = (r.scan < r.target ? "PENDING" : "OVER");
+let status;
         
+        // --- LOGIKA KHUSUS TAG I ---
+        if (jenis === "TAG I") {
+            // Karena TAG I hanya pendataan (target 0), maka asal ada scan (scan > 0) dianggap DONE
+            status = r.scan > 0 ? "DONE" : "PENDING";
+        } 
+        // --- LOGIKA STANDAR (KONTAINER, DOS, MANUAL) ---
+        else if (r.target === "N/A" || r.scan === r.target) {
+            status = "DONE";
+        } else if (itemPunyaKet !== "") {
+            status = "SELISIH";
+        } else {
+            status = (r.scan < r.target ? "PENDING" : "OVER");
+        }
+        
+        // Update isAllMatch: Tombol Finalisasi hanya aktif jika semua DONE atau SELISIH
         if (status !== "DONE" && status !== "SELISIH") isAllMatch = false; 
         
         const colorBg = status === 'DONE' ? '#d4edda' : (status === 'SELISIH' ? '#ffcc80' : (status === 'PENDING' ? '#f8d7da' : '#fff3cd'));
@@ -1715,7 +1749,7 @@ if (isComparisonType) {
             <td>${r.scan}</td>
             <td>
                 <b>${status}</b><br>
-                <button onclick="revisiQty(${indexAsli})" style="font-size:10px; background:#f39c12; color:white; border:none; border-radius:3px; padding:3px 8px;">REVISI</button>
+                <button onclick="editItemAntrian('${key}')" style="font-size:10px; background:#f39c12; color:white; border:none; border-radius:3px; padding:3px 8px;">REVISI</button>
             </td>
         </tr>`;
     });
