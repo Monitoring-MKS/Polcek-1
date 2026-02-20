@@ -400,7 +400,7 @@ window.onbeforeunload = function(e) {
 
 const G_GITHUB_URL = "https://raw.githubusercontent.com/Monitoring-MKS/Polcek-1/refs/heads/main/database_polcek.json";
 
-const G_URL = "https://script.google.com/macros/s/AKfycbz4xtQF8yZFd_EUXUPm6Lj5lAJ92emNYrRb_UlM_s4XI70NUAjKfzKexqj4gEyB2Fw/exec";
+const G_URL = "https://script.google.com/macros/s/AKfycbzlD711I86Wl_ePjOHEMwLumuopwDg0LNMW-kJk88FN7ycpI3ivjSL75NQ54H7V5DQ/exec";
 
 let dbPickAuto = [];
 let dbMasterBarcode = [];
@@ -1004,17 +1004,34 @@ function fillData(m) {
 
 // --- 4. FUNGSI SAVE DATA (BERSIHKAN SEMUA) ---
 async function saveData() {
-const petugasAktif = currentUser || localStorage.getItem('activeUser') || "Tanpa Nama";
+    const petugasAktif = currentUser || localStorage.getItem('activeUser') || "Tanpa Nama";
     const qtyInp = document.getElementById('p_qty_input');
     const jenis = document.getElementById('p_jenis').value;
     const kodeToko = document.getElementById('p_kode').value.toUpperCase();
     const fakturVal = document.getElementById('p_faktur').value;
+    const pluVal = document.getElementById('p_plu').value;
+    const barcodeVal = document.getElementById('p_scan_label').value;
     
     if (!qtyInp.value || qtyInp.value <= 0) return notify("Isi Qty!", "error", "p_qty_input");
 
+    // --- REVISI KHUSUS LOGIKA NO KONTAINER ---
+    let noKontainer = "-"; 
+
+    if (jenis === "KONTAINER") {
+        // Ambil dari barcode: K0001-R540 atau -K0001-R540
+        let bersih = barcodeVal.startsWith("-") ? barcodeVal.substring(1) : barcodeVal;
+        noKontainer = bersih.split("-")[0].toUpperCase().trim();
+    } 
+    else if (jenis === "DOS") {
+        // Ambil dari Lookup dbPickAuto
+        const item = dbPickAuto.find(i => String(i.faktur).trim() === String(fakturVal).trim() && String(i.plu).trim() === String(pluVal).trim());
+        noKontainer = item ? (item.kontainer || item[5] || "-") : "-";
+    }
+    // ------------------------------------------
+
     const kelompokNonScan = ["NON-PTL","TELUR", "MKT", "ATK GS", "MATERAI"];
-   updateBadge(); 
-    // Jika masuk kelompok NON-SCAN, langsung kirim ke server (Point 9)
+    updateBadge(); 
+
     if (kelompokNonScan.includes(jenis)) {
         const dataLangsung = [{
             tgl: document.getElementById('p_tgl').value,
@@ -1030,12 +1047,11 @@ const petugasAktif = currentUser || localStorage.getItem('activeUser') || "Tanpa
             qty_data: 0,
             qty_scan: parseInt(qtyInp.value),
             keterangan: "",            
-            petugas: petugasAktif
+            petugas: petugasAktif,
+            kontainer: noKontainer // Masuk ke kolom P
         }];
-
         await kirimDataLangsung(dataLangsung);
     } else {
-        // Alur Biasa (DOS, MANUAL, KONTAINER) simpan ke LocalStorage dulu
         let q = JSON.parse(localStorage.getItem('q_polcek') || "[]");
         q.push({
             tgl: document.getElementById('p_tgl').value,
@@ -1050,19 +1066,17 @@ const petugasAktif = currentUser || localStorage.getItem('activeUser') || "Tanpa
             descp: document.getElementById('p_descp').value,
             qty_data: parseInt(document.getElementById('p_qty_data').value || 0),
             qty_scan: parseInt(qtyInp.value),
-	    keterangan: "",            
-	    petugas: petugasAktif
+            keterangan: "",            
+            petugas: petugasAktif,
+            kontainer: noKontainer // Masuk ke kolom P
         });
-localStorage.setItem('q_polcek', JSON.stringify(q));
+        localStorage.setItem('q_polcek', JSON.stringify(q));
         updateBadge();
 
-        // --- TAMBAHKAN PROSES RESET DI SINI ---
         const toReset = ['p_scan_label', 'p_scan_fisik', 'p_plu', 'p_descp', 'p_zona', 'p_qty_input', 'p_qty_data'];
         toReset.forEach(id => { 
             if(document.getElementById(id)) document.getElementById(id).value = ""; 
         });
-
-        // Jalankan fungsi fokus dan pastikan area fisik tetap muncul
         afterSaveFocus(jenis); 
     }
 }
