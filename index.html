@@ -1796,38 +1796,56 @@ else if (r.target === "N/A" || r.scan === r.target) {
     }
 }
 
-function processStoreInput() {
+async function processStoreInput() {
     const kodeInput = document.getElementById('p_kode');
     if (kodeInput && kodeInput.value.trim() !== "") {
-        // --- AWAL TAMBAHAN: LOGIKA EKSTRAKSI BARCODE LABEL ---
         let rawVal = kodeInput.value.trim().toUpperCase();
         const parts = rawVal.split('-').filter(Boolean);
 
+        // --- LOGIKA EKSTRAKSI BARCODE LABEL ---
         if (parts.length > 1) {
-            // Jika discan dari Label KONTAINER (Contoh: A0001-R665) -> Ambil R665
             if (rawVal.includes("KONTAINER") || parts.length === 2) {
                 rawVal = parts[1];
-            } 
-            // Jika discan dari Label DOS (Contoh: DOS-C5-R665-432296) -> Ambil R665
-            else if (rawVal.includes("DOS") || parts.length >= 4) {
+            } else if (rawVal.includes("DOS") || parts.length >= 4) {
                 rawVal = parts[2];
             }
         }
-        kodeInput.value = rawVal; // Masukkan hasil ekstraksi kembali ke kolom
-        // --- AKHIR TAMBAHAN ---
+        kodeInput.value = rawVal; 
 
-        // Jalankan filter (Struktur asli tetap di bawah)
+        // Jalankan filter asli
         const found = runFilter(); 
 
         if (found) {
-            // Sesuai Tahap 8: Setelah input Kode Toko, fokus ke Faktur
+            // --- TAMBAHAN: LOGIKA POP UP TOKO KHUSUS ---
+            const tokoKhusus = [
+                "R435", "R632", "R728", "R430", "R044", "R640", "R047", "R860", "R876",
+                "R283", "R474", "R473", "R444", "R387", "R151", "R341", "R323", "R314",
+                "R363", "R446", "R672", "R236", "R287", "R385", "R354", "R184", "R565",
+                "R103", "R202", "R154", "R616", "R829", "R617", "R653", "R590", "R309",
+                "R130", "R470", "R472", "R750", "R451", "R608", "R152", "R264", "R003",
+                "R512", "R017", "R339", "R153", "R089", "R002", "R454", "R021", "R053"
+            ];
+
+            if (tokoKhusus.includes(rawVal)) {
+                const namaToko = document.getElementById('p_nama').value || "";
+                
+                // Gunakan await Swal agar eksekusi berhenti sampai user klik OK
+                await Swal.fire({
+                    title: '📢 PERHATIAN INI TOKO SAPA !!',
+                    html: `Pastikan NO Order yang sudah di Lapak di Data !!`,
+                    icon: 'warning',
+                    confirmButtonText: 'SIAP, LANJUT',
+                    confirmButtonColor: '#3085d6',
+                    allowOutsideClick: false // User wajib klik tombol
+                });
+            }
+
             setFocus('p_faktur');
         } else {
             notify("⚠️ Toko tidak ditemukan!", "error", "p_kode");
         }
     }
 }
-
 function alurFokus(currentStep) {
     if (currentStep === 'tgl') {
         setFocus('p_jenis');
