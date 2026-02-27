@@ -1510,20 +1510,43 @@ function renderMonitorTable(dataMap) {
 }
 
     function closeMonitoring() {
-    const modalReport = document.getElementById('modal_report');
-    if (modalReport) modalReport.style.display = 'none';
+    // 1. Tutup semua kemungkinan modal yang terbuka
+    if (document.getElementById('modal_report')) document.getElementById('modal_report').style.display = 'none';
+    if (document.getElementById('modal_monitor')) document.getElementById('modal_monitor').style.display = 'none';
 
-    const modalMonitor = document.getElementById('modal_monitor');
-    if (modalMonitor) modalMonitor.style.display = 'none';
+    // 2. CEK LOGIKA POSISI: Apakah sedang proses scan?
+    const fakturAktif = document.getElementById('p_faktur').value;
 
-    if (typeof toggleArea === "function") {
-        toggleArea('HEADER'); 
+    if (fakturAktif !== "") {
+        // JIKA FAKTUR TERISI: Berarti user tadi sedang di area Scan.
+        // Kembalikan tampilan ke Scan, bukan Header.
+        document.getElementById('group_header').style.display = 'none';
+        document.getElementById('group_scan').style.display = 'block';
+        
+        // Kembalikan fokus ke input scan sesuai jenisnya
+        if (typeof fokusKeInputScan === "function") {
+            fokusKeInputScan(); 
+        }
+    } else {
+        // JIKA FAKTUR KOSONG: Kembali ke menu awal (Header)
+        document.getElementById('group_header').style.display = 'block';
+        document.getElementById('group_scan').style.display = 'none';
+        setTimeout(() => { document.getElementById('p_kode').focus(); }, 300);
     }
+}
 
-    // 4. Kembalikan fokus ke input Kode Store agar bisa langsung kerja lagi
+function fokusKeInputScan() {
+    const jenis = document.getElementById('p_jenis').value;
+    const kelompokNonScan = ["NON-PTL", "TELUR", "MKT", "ATK GS", "MATERAI"];
+
     setTimeout(() => {
-        const pKode = document.getElementById('p_kode');
-        if (pKode) pKode.focus();
+        if (kelompokNonScan.includes(jenis)) {
+            document.getElementById('p_qty_input').focus();
+        } else if (jenis === "DOS" || jenis === "MANUAL") {
+            document.getElementById('p_scan_fisik').focus();
+        } else {
+            document.getElementById('p_scan_label').focus();
+        }
     }, 300);
 }
 
