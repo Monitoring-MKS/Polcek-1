@@ -294,7 +294,9 @@
         <div class="input-row"><div class="label">KD TOKO</div><input type="text" id="p_kode" placeholder="Scan/Ketik..." onchange="processStoreInput()"></div>
         <div class="input-row"><div class="label">NAMA TOKO</div><input type="text" id="p_nama" readonly></div>
         <div class="input-row"><div class="label">URPICK</div><input type="text" id="p_urpick" readonly></div>
-        <div class="input-row"><div class="label">NO FAKTUR</div><select id="p_faktur" onchange="toggleKeScan()"><option value="">-- PILIH FAKTUR --</option></select></div>
+        <div class="input-row"><div class="label">NO FAKTUR</div><select id="p_faktur" class="form-control" onchange="checkFakturFinal()">
+    <option value="">-- PILIH FAKTUR --</option>
+</select></div>
     </div>
 
     <div id="group_scan" style="display:none;">
@@ -549,13 +551,10 @@ async function initApp() {
 ];
 
 async function loadInitialData() {
-    // 1. Munculkan Loader (Pastikan ID-nya sesuai dengan di HTML Anda)
     const loader = document.getElementById('loader');
     if (loader) loader.style.display = 'flex';
 
-    console.log("Memulai penarikan data dari GitHub...");
-
-try {
+    try {
         const res = await fetch(G_GITHUB_URL);
         if (!res.ok) throw new Error("Gagal ambil data GitHub");
         
@@ -564,34 +563,33 @@ try {
         dbPickAuto = out.pickAuto || [];
         dbMasterBarcode = out.masterBarcode || [];
         dbManual = out.dataManual || [];
-        dbSudahPolcek = out.dataSudahPolcek || [];
-
-        // 🔥 HAPUS ATAU KOMENTARI BARIS DI BAWAH INI:
-        // localStorage.setItem("db_pick_auto", JSON.stringify(dbPickAuto));
-        // localStorage.setItem("db_master_barcode", JSON.stringify(dbMasterBarcode));
         
-        console.log("Data GitHub berhasil dimuat ke RAM!");
+        // --- BAGIAN BARU: MERGE DATA SERVER + LOCAL ---
+        let serverSudah = out.dataSudahPolcek || [];
+        let localTemp = JSON.parse(localStorage.getItem('temp_final_polcek') || "[]");
+
+        // Gabungkan keduanya ke RAM
+        dbSudahPolcek = [...serverSudah, ...localTemp];
+
+        // Pembersihan Otomatis: Hapus data lokal jika sudah ada di server
+        const filteredLocal = localTemp.filter(l => 
+            !serverSudah.some(s => s.faktur === l.faktur && s.kode === l.kode && s.jenis === l.jenis)
+        );
+        localStorage.setItem('temp_final_polcek', JSON.stringify(filteredLocal));
+        // ----------------------------------------------
+        
+        console.log("Data berhasil disinkronkan!");
 
     } catch (e) {
-        console.error("Gagal tarik GitHub", e);
-        // Jika gagal, biarkan variabel kosong atau ambil dari cache RAM jika ada
-        Swal.fire({
-            icon: 'warning',
-            title: 'Koneksi Bermasalah',
-            text: 'Gagal update data terbaru dari GitHub.',
-            timer: 2000
-        });
+        console.error("Gagal tarik GitHub, menggunakan cache lokal", e);
+        // Jika gagal internet, tetap gunakan data kuncian lokal agar petugas tidak double scan
+        dbSudahPolcek = JSON.parse(localStorage.getItem('temp_final_polcek') || "[]");
     } finally {
         if (loader) loader.style.display = 'none';        
         if (typeof updateBadge === "function") updateBadge();
-        
-        console.log("Proses loading selesai.");
-updateBadge();
     }
 }
-    // ==========================================
-    // AUTHENTICATION FUNCTIONS
-    // ==========================================
+
     function checkNIK() {
         const nikInput = document.getElementById('l_nik').value;
         const user = usersDB.find(u => u.nik === nikInput);
@@ -653,25 +651,22 @@ function aktifkanFullScreen() {
     function doLogout() {
     Swal.fire({
         title: "Logout?",
-        text: "Anda akan keluar dari sesi kerja ini.",
+        text: "Sesi Anda akan berakhir dan data cadangan akan dibersihkan.",
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#d33",
         confirmButtonText: "Ya, Keluar"
     }).then((result) => {
         if (result.isConfirmed) {
-            // Hapus semua kunci login
+            // Bersihkan Sesi Login
             localStorage.removeItem("isLoggedIn");
             localStorage.removeItem("loggedUser");
             
-            // Kembalikan tampilan
-            document.getElementById('main_app').style.display = 'none';
-            document.getElementById('login_screen').style.display = 'block';
+            // Bersihkan Cadangan Kuncian (Penting agar user lain tidak bingung)
+            localStorage.removeItem("temp_final_polcek");
             
-            // Opsional: Bersihkan form login
-            document.getElementById('l_nik').value = "";
-            document.getElementById('l_pass').value = "";
-            document.getElementById('l_nama').value = "";
+            // Paksa Reload ke halaman Login
+            location.reload(); 
         }
     });
 }
@@ -729,6 +724,51 @@ function toggleKeScan() {
     }
 }
 
+function checkFakturFinal() {
+    const tglRaw = document.getElementById('p_tgl').value;
+    const jenis = document.getElementById('p_jenis').value;
+    const kode = document.getElementById('p_kode').value.trim().toUpperCase();
+    const faktur = document.getElementById('p_faktur').value;
+
+    if (!tglRaw || !kode || !jenis || !faktur) return;
+
+    // Format tanggal
+    const d = new Date(tglRaw);
+    const tglCheck = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+
+    // Cari di database hasil final
+    const sudahAda = dbSudahPolcek.some(item => 
+        String(item.tgl).trim() === tglCheck &&
+        String(item.kode).trim() === kode &&
+        String(item.jenis).trim().toUpperCase() === jenis.toUpperCase() &&
+        String(item.faktur).trim() === faktur
+    );
+
+    if (sudahAda) {
+        if (typeof playError === "function") playError();
+        Swal.fire({
+            icon: 'error',
+            title: 'SUDAH PERNAH SCAN!',
+            text: `Faktur ${faktur} sudah final.`,
+            confirmButtonColor: '#c0392b'
+        }).then(() => {
+            document.getElementById('p_kode').value = "";
+            document.getElementById('p_faktur').innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
+            setTimeout(() => { document.getElementById('p_kode').focus(); }, 300);
+        });
+            // 1. Kosongkan input terkait toko dan faktur
+            document.getElementById('p_kode').value = "";
+            document.getElementById('p_nama').value = "";
+            document.getElementById('p_urpick').value = "";
+            document.getElementById('p_faktur').innerHTML = '<option value="">-- PILIH FAKTUR --</option>';
+
+    } else {
+        // 🔥 JIKA LOLOS VALIDASI: OTOMATIS PINDAH KE SCAN
+        // Memanggil fungsi bawaan Anda untuk pindah area
+        toggleKeScan(); 
+    }
+}
+
     function runFilter() {
     const tglRaw = document.getElementById('p_tgl').value;
     const jenis = document.getElementById('p_jenis').value;
@@ -748,6 +788,16 @@ function toggleKeScan() {
     const filtered = currentDB.filter(item => {
         return item.tglInput === tglCheck && item.kodeToko === kode;
     });
+const isSudahFinal = dbSudahPolcek.some(item => 
+    item.faktur === fSelect.value && // fSelect adalah dropdown faktur
+    item.kode === kode && 
+    item.jenis === jenis
+);
+
+if (isSudahFinal) {
+    Swal.fire("DITOLAK", "Faktur untuk toko ini sudah difinalisasi!", "error");
+    return false; 
+}
 
     if (filtered.length > 0) {
         // Isi Nama Toko dan Urpick secara otomatis
@@ -1158,7 +1208,9 @@ async function prosesFinalisasi() {
     const fakturAktif = document.getElementById('p_faktur').value;
     const kodeAktif = document.getElementById('p_kode').value;
 
-    document.getElementById('modal_report').style.display = 'none';
+    // 1. Sembunyikan modal antrean/report saat konfirmasi muncul
+    const modalReport = document.getElementById('modal_report');
+    if (modalReport) modalReport.style.display = 'none';
 
     const { isConfirmed } = await Swal.fire({ 
         title: 'Kirim Data?', 
@@ -1166,25 +1218,24 @@ async function prosesFinalisasi() {
         icon: 'question', 
         showCancelButton: true,
         confirmButtonText: 'Ya, Kirim!',
-        cancelButtonText: 'Cek Lagi'
+        cancelButtonText: 'Batal'
     });
 
+    // 2. JIKA BATAL: Munculkan kembali modal antrean agar user bisa edit/cek lagi
     if (!isConfirmed) {
-        document.getElementById('modal_report').style.display = 'block';
+        if (modalReport) modalReport.style.display = 'block';
         return;
     }
 
     const loader = document.getElementById('loader');
-    loader.style.display = 'flex'; 
+    if (loader) loader.style.display = 'flex'; 
 
     try {
-        // 1. Ambil data dari antrean lokal
         let allLocalData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
         const dataToSend = allLocalData.filter(i => i.jenis === jenisAktif && i.faktur === fakturAktif && i.kode === kodeAktif);
 
-        if (dataToSend.length === 0) throw new Error("Tidak ada data untuk dikirim");
+        if (dataToSend.length === 0) throw new Error("Tidak ada data");
 
-        // 2. Kirim ke G_URL dengan header text/plain (KUNCI AGAR TIDAK ERROR CORS)
         const res = await fetch(G_URL, { 
             method: 'POST', 
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -1192,59 +1243,42 @@ async function prosesFinalisasi() {
         });
         
         const out = await res.json();
-        
-        // MATIKAN LOADING SEGERA SETELAH RESPON DITERIMA
-        loader.style.display = 'none'; 
+        if (loader) loader.style.display = 'none'; 
 
         if (out.status === "success") {
-            // 3. Update Monitoring Lokal (Optimistic)
-            // Ini agar di tabel monitoring langsung muncul ✅
+            // Logika Optimistic Update (Kuncian Lokal)
+            let tempFinal = JSON.parse(localStorage.getItem('temp_final_polcek') || "[]");
             dataToSend.forEach(d => {
-                dbSudahPolcek.push({
-                    ...d,
-                    tgl: d.tgl || new Date().toISOString()
-                });
+                const item = { tgl: d.tgl, kode: d.kode, jenis: d.jenis, faktur: d.faktur };
+                dbSudahPolcek.push(item); 
+                tempFinal.push(item);
             });
+            localStorage.setItem('temp_final_polcek', JSON.stringify(tempFinal));
 
-            // 4. Hapus dari LocalStorage
+            // Hapus data dari antrean
             const sisaData = allLocalData.filter(i => !(i.jenis === jenisAktif && i.faktur === fakturAktif && i.kode === kodeAktif));
             localStorage.setItem('q_polcek', JSON.stringify(sisaData));
             
-            updateBadge(); // Update badge antrean
-
-            // 5. Reset Form dan kembali ke halaman utama
-            clearAllFieldsInternal(); 
-
-            // 6. Notifikasi Sukses Singkat
-            Swal.fire({
-                icon: 'success',
-                title: 'Terkirim!',
-                timer: 1000,
-                showConfirmButton: false,
-                toast: true,
-                position: 'top-end'
-            });
-
-            setTimeout(() => {
-                const inputJenis = document.getElementById('p_jenis');
-                if (inputJenis) {
-                    inputJenis.focus();
-                    // Jika ingin otomatis membuka dropdown (untuk beberapa browser):
-                    inputJenis.click(); 
-                }
-            }, 500);
+            // 3. TUTUP SEMUA MODAL SECARA PERMANEN
+            if (modalReport) modalReport.style.display = 'none';
             
-        
+            updateBadge();
+            clearAllFieldsInternal(); // Kembali ke Header & Fokus Kode Store
 
-        } else {
-            throw new Error(out.message || "Gagal simpan di server");
+            Swal.fire({ 
+                icon: 'success', 
+                title: 'Terkirim!', 
+                timer: 1000, 
+                showConfirmButton: false, 
+                toast: true, 
+                position: 'top-end' 
+            });
         }
-
     } catch (e) { 
         if (loader) loader.style.display = 'none';
-        console.error(e);
-        Swal.fire("Gagal Kirim", "Koneksi bermasalah atau Server Sibuk. Data tetap aman di antrean HP.", "error"); 
-        document.getElementById('modal_report').style.display = 'block';
+        // JIKA GAGAL: Kembalikan modal agar user tahu data belum terkirim
+        if (modalReport) modalReport.style.display = 'block';
+        Swal.fire("Gagal", "Koneksi bermasalah, data tetap di antrean.", "error"); 
     }
 }
 
@@ -1349,34 +1383,30 @@ function clearAllFieldsInternal() {
 }
 
 async function showMonitoring() {
-    const tglRaw = document.getElementById('p_tgl').value; // Dari input HTML
+    const tglRaw = document.getElementById('p_tgl').value; 
     if (!tglRaw) {
         Swal.fire("Pilih Tanggal", "Tentukan tanggal proses", "warning");
         return;
     }
 
+    // Jalankan sinkronisasi yang sudah include logika merge
     await sinkronDataServer();
 
-    // Normalisasi: Ambil 10 karakter pertama, pastikan string, buang spasi
     const tglTarget = String(tglRaw).substring(0, 10).trim();
-    
     document.getElementById('monitor_date').innerHTML = `TANGGAL PROSES: <span style="color: #2980b9;">${tglTarget}</span>`;
 
     const clean = v => String(v || "").trim().toUpperCase();
     let monitorMap = {};
 
-    // 1️⃣ FILTER TARGET (MASTER DATA)
+    // --- 1️⃣ FILTER TARGET (MASTER DATA) ---
     const masterData = [
         ...dbPickAuto.map(d => ({ ...d, src: 'PA' })),
         ...dbManual.map(d => ({ ...d, src: 'MN' }))
     ];
 
     masterData.forEach(item => {
-        // Ambil tgl dari property yang ada (tglInput atau tgl)
         let tglM = item.tglInput || item.tgl; 
         const tglMaster = String(tglM || "").substring(0, 10).trim();
-        
-        // DEBUG (Hapus jika sudah jalan): console.log(`Cek Master: ${tglMaster} vs ${tglTarget}`);
 
         if (tglMaster !== tglTarget) return; 
 
@@ -1389,8 +1419,8 @@ async function showMonitoring() {
                 kode: kode, 
                 tKN: 0, tDS: 0, tMN: 0, 
                 sKN: 0, sDS: 0, sMN: 0, 
-                hasRemark: false, 
-                petugas: [] 
+                hasRemark: false,
+                uKN: [], uDS: [], uMN: [] 
             };
         }
 
@@ -1406,33 +1436,27 @@ async function showMonitoring() {
         }
     });
 
-// 2️⃣ REALISASI DARI SCAN (dbSudahPolcek)
+    // --- 2️⃣ REALISASI DARI SCAN (Membaca dbSudahPolcek yang sudah di-merge) ---
     dbSudahPolcek.forEach(s => {
         const tglScan = String(s.tgl || "").substring(0, 10).trim();
         if (tglScan !== tglTarget) return; 
 
         const kode = clean(s.kode);
         const jenis = clean(s.jenis);
-        const pgw = s.petugas || "Anonim";
+        // Jika data dari lokal, beri tanda "SAYA", jika dari server ambil nama petugas
+        const pgw = s.petugas || "SAYA"; 
 
         if (monitorMap[kode]) {
-            // Update QTY Realisasi
             if (jenis === "KONTAINER") {
                 monitorMap[kode].sKN += parseInt(s.qty_scan || 0);
-                // Catat petugas khusus Kontainer
-                if (!monitorMap[kode].uKN) monitorMap[kode].uKN = [];
                 if (!monitorMap[kode].uKN.includes(pgw)) monitorMap[kode].uKN.push(pgw);
             } 
             else if (jenis === "DOS") {
                 monitorMap[kode].sDS += parseInt(s.qty_scan || 0);
-                // Catat petugas khusus Dos
-                if (!monitorMap[kode].uDS) monitorMap[kode].uDS = [];
                 if (!monitorMap[kode].uDS.includes(pgw)) monitorMap[kode].uDS.push(pgw);
             } 
             else if (jenis === "MANUAL") {
                 monitorMap[kode].sMN += parseInt(s.qty_scan || 0);
-                // Catat petugas khusus Manual
-                if (!monitorMap[kode].uMN) monitorMap[kode].uMN = [];
                 if (!monitorMap[kode].uMN.includes(pgw)) monitorMap[kode].uMN.push(pgw);
             }
 
@@ -1464,9 +1488,8 @@ function renderMonitorTable(dataMap) {
         let rowBg = isAllMatch ? "#d4edda" : (d.hasRemark ? "#ffeeba" : "white");
         let statusIcon = isAllMatch ? "✅" : (d.hasRemark ? "⚠️" : "⏳");
 
-        // Fungsi pembantu untuk format angka dan list petugas di bawahnya
         const formatCell = (t, s, users) => {
-            const color = t === s ? 'black' : 'red';
+            const color = (t === s && t !== 0) ? 'black' : (s > t ? 'orange' : (s === 0 ? '#bdc3c7' : 'red'));
             const userList = (users && users.length > 0) ? `<br><span style="color:#7f8c8d; font-size:9px;">${users.join(",")}</span>` : "";
             return `<span style="color: ${color}; font-weight:bold;">${t}/${s}</span>${userList}`;
         };
@@ -1485,31 +1508,62 @@ function renderMonitorTable(dataMap) {
     html += `</tbody></table>`;
     container.innerHTML = html;
 }
+
     function closeMonitoring() {
-        document.getElementById('modal_report').style.display = 'none';
-        document.getElementById('report_head').style.display = ''; 
-        document.getElementById('btn_finalisasi').style.display = 'block';
-        document.getElementById('report_title').innerText = "DATA COMPARE";
+    const modalReport = document.getElementById('modal_report');
+    if (modalReport) modalReport.style.display = 'none';
+
+    const modalMonitor = document.getElementById('modal_monitor');
+    if (modalMonitor) modalMonitor.style.display = 'none';
+
+    if (typeof toggleArea === "function") {
+        toggleArea('HEADER'); 
     }
+
+    // 4. Kembalikan fokus ke input Kode Store agar bisa langsung kerja lagi
+    setTimeout(() => {
+        const pKode = document.getElementById('p_kode');
+        if (pKode) pKode.focus();
+    }, 300);
+}
 
 async function sinkronDataServer() {
     const loader = document.getElementById('loader');
-    if (loader) loader.style.display = 'flex'; // Mulai Loading
+    if (loader) loader.style.display = 'flex'; 
 
     try {
-        // Tambahkan ?t= agar tidak ambil data lama dari cache browser
+        // Tambahkan timestamp ?t= agar bypass cache browser
         const res = await fetch(G_GITHUB_URL + "?t=" + new Date().getTime());
         if (!res.ok) throw new Error("GitHub sedang sibuk");
 
         const out = await res.json();
-        dbSudahPolcek = out.dataSudahPolcek || [];
-        console.log("Data Berhasil Sinkron");
+        
+        // --- PROSES PENGGABUNGAN (MERGE) ---
+        let serverData = out.dataSudahPolcek || [];
+        let localTemp = JSON.parse(localStorage.getItem('temp_final_polcek') || "[]");
+
+        // Satukan data server dengan data yang baru saja dikirim di HP ini
+        dbSudahPolcek = [...serverData, ...localTemp];
+
+        // Cleanup: Hapus data di localStorage jika di server sudah muncul (sudah sinkron)
+        const filteredLocal = localTemp.filter(l => 
+            !serverData.some(s => 
+                String(s.faktur).trim() === String(l.faktur).trim() && 
+                String(s.kode).trim() === String(l.kode).trim() &&
+                String(s.jenis).trim().toUpperCase() === String(l.jenis).trim().toUpperCase()
+            )
+        );
+        localStorage.setItem('temp_final_polcek', JSON.stringify(filteredLocal));
+        
+        console.log("Sinkronisasi Berhasil: Data Server & Lokal digabungkan.");
+
     } catch (e) {
-        console.warn("Gagal ambil dari GitHub, mencoba ambil langsung dari GSheet...");
-        // Jika GitHub gagal, langsung tembak GSheet agar tidak loading selamanya
-        await ambilDataLangsungGSheet();
+        console.warn("Gagal ambil dari GitHub, menggunakan data lokal yang ada.");
+        // Jika offline, pastikan RAM tetap berisi data kuncian terakhir
+        let localTemp = JSON.parse(localStorage.getItem('temp_final_polcek') || "[]");
+        if (dbSudahPolcek.length === 0) dbSudahPolcek = localTemp;
     } finally {
-        if (loader) loader.style.display = 'none'; // WAJIB MATI DI SINI
+        if (loader) loader.style.display = 'none'; 
     }
 }
 
@@ -1818,12 +1872,11 @@ async function processStoreInput() {
         if (found) {
             // --- TAMBAHAN: LOGIKA POP UP TOKO KHUSUS ---
             const tokoKhusus = [
-                "R435", "R632", "R728", "R430", "R044", "R640", "R047", "R860", "R876",
-                "R283", "R474", "R473", "R444", "R387", "R151", "R341", "R323", "R314",
-                "R363", "R446", "R672", "R236", "R287", "R385", "R354", "R184", "R565",
-                "R103", "R202", "R154", "R616", "R829", "R617", "R653", "R590", "R309",
-                "R130", "R470", "R472", "R750", "R451", "R608", "R152", "R264", "R003",
-                "R512", "R017", "R339", "R153", "R089", "R002", "R454", "R021", "R053"
+                "R053","R021","R454","R002","R089","R153","R339","R017","R512","R003","R264",
+		"R152","R608","R451","R750","R472","R470","R130","R309","R590","R653","R617",
+		"R829","R616","R154","R202","R103","R565","R184","R354","R385","R287","R236",
+		"R672","R446","R363","R314","R323","R341","R151","R387","R444","R473","R474",
+		"R283","R876","R860","R047","R640","R044","R430","R728","R632","R435"
             ];
 
             if (tokoKhusus.includes(rawVal)) {
@@ -2327,15 +2380,12 @@ function hapusSemuaAntrian() {
 }
 
 function pilihAntrian(tgl, kode, faktur, jenis) {
-    // 1. Masukkan data ke input header
     document.getElementById('p_tgl').value = tgl;
     document.getElementById('p_kode').value = kode;
     document.getElementById('p_jenis').value = jenis;
     
-    // 2. Jalankan filter toko agar info nama muncul
     processStoreInput(); 
     
-    // 3. Set No Faktur dan trigger tampil area scan/report
     setTimeout(() => {
         document.getElementById('p_faktur').value = faktur;
         document.getElementById('modal_antrian').style.display = 'none';
@@ -2357,6 +2407,22 @@ function toggleArea(target) {
         scan.style.display = 'block';
     }
 }
+
+window.onload = function() {
+    const loginStatus = localStorage.getItem("isLoggedIn");
+    const savedUser = localStorage.getItem("activeUser");
+
+    if (loginStatus === "true" && savedUser) {
+        // Langsung masuk ke aplikasi tanpa login ulang
+        currentUser = savedUser;
+        document.getElementById('login_screen').style.display = 'none';
+        document.getElementById('main_app').style.display = 'block';
+        document.getElementById('display_user').innerText = savedUser;
+        
+        // Tarik data terbaru
+        loadInitialData();
+    }
+};
 
 </script>
 </body>
