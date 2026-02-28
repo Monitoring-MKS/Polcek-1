@@ -189,72 +189,30 @@
     z-index: 99999 !important;
 }
 
-
-/* Pastikan sticky bekerja dengan baik */
-.sticky-header {
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    background: white;
-}
-
-/* Untuk modal monitoring */
-#modal_monitor .sticky-top {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: white;
-}
-
-/* Agar konten bisa scroll dengan baik */
-#modal_monitor > div {
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
 </style>
 
 </head>
 <body onload="loadInitialData()">
 
 <div id="modal_monitor" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:20000; overflow-y:auto; padding:10px;">
-    <div style="background:white; border-radius:10px; height:95vh; display:flex; flex-direction:column; position:relative;">
+    <div style="background:white; border-radius:10px; padding:15px; min-height:100%; position: relative;">
+        <button class="btn-close-modal" onclick="document.getElementById('modal_monitor').style.display='none'">×</button>
         
-        <!-- INI BAGIAN YANG AKAN STICKY DI ATAS -->
-        <div style="position:sticky; top:0; z-index:100; background:white; border-radius:10px 10px 0 0;">
-            
-            <!-- Judul dengan Background Biru -->
-            <div style="background:#2c3e50; color:white; padding:12px 15px; border-radius:10px 10px 0 0; text-align:center; position:relative;">
-                <button class="btn-close-modal" onclick="document.getElementById('modal_monitor').style.display='none'" 
-                        style="position:absolute; top:8px; right:10px; background:#c0392b; color:white; border:none; border-radius:50%; width:30px; height:30px; font-size:18px; cursor:pointer; display:flex; justify-content:center; align-items:center; z-index:101;">
-                    ×
-                </button>
-                <h3 style="margin:0; font-size:16px;">MONITORING POLCEK</h3>
-                <p id="monitor_date" style="margin:5px 0 0 0; font-size:11px; opacity:0.9;"></p>
-            </div>
-            
-            <!-- Tombol Sync -->
-            <div style="padding:8px 12px; background:#f8f9fa; border-bottom:1px solid #dee2e6;">
-                <button onclick="refreshMonitoringData()" style="background:#27ae60; color:white; padding:10px; border:none; border-radius:5px; cursor:pointer; width:100%; font-size:12px; font-weight:bold;">
-                    🔄 SYNC DATA
-                </button>
-            </div>
-            
-            <!-- Total Card Container - INI JUGA STICKY -->
-            <div id="total_card_container" style="padding:8px 12px; background:white; border-bottom:2px solid #2c3e50;"></div>
-            
-        </div>
-        
-        <!-- CONTENT YANG BISA DI-SCROLL -->
-        <div id="monitor_content" style="overflow-y: auto; padding:12px; flex:1; background:#f0f2f5;">
-            <!-- Table akan dimasukkan di sini oleh JavaScript -->
-        </div>
-        
-        <!-- FOOTER (TIDAK STICKY) -->
-        <div style="padding:10px 12px; border-top:1px solid #dee2e6; background:white; border-radius:0 0 10px 10px;">
-            <button class="btn-main" style="background:#34495e; width:100%; padding:12px; font-size:12px; border:none; border-radius:5px; color:white; font-weight:bold; cursor:pointer;" onclick="document.getElementById('modal_monitor').style.display='none'">
-                TUTUP MONITORING
+        <h3 style="text-align:center; margin-top:0; color: #2c3e50;">MONITORING POLCEK</h3>
+
+<p id="monitor_date" style="text-align:center; font-size:10px; font-weight:bold; margin-top:-10px; color: #555;"></p>
+<button onclick="refreshMonitoringData()" style="background: #27ae60; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer;">
+                🔄 Sync Data
             </button>
+        <p id="monitor_date" style="text-align:center; font-size:12px; font-weight:bold;"></p>
+        
+        <hr>
+
+        <div id="monitor_content" style="overflow-x:auto;">
+             </div>
+
+        <div style="margin-top:20px;">
+            <button class="btn-main" style="background:#34495e; width: 100%;" onclick="document.getElementById('modal_monitor').style.display='none'">TUTUP MONITORING</button>
         </div>
     </div>
 </div>
@@ -272,43 +230,25 @@
 </div>
 
 <div id="modal_antrian" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:20000; overflow-y:auto; padding:10px;">
-    <div style="background:white; border-radius:10px; padding:0; min-height:100%; position: relative; display:flex; flex-direction:column;">
-        
-        <!-- HEADER MODAL dengan X di kanan -->
-        <div style="background:#2c3e50; color:white; padding:15px; border-radius:10px 10px 0 0; position:relative; text-align:center;">
-            <h3 style="margin:0; font-size:16px;">ANTRIAN BELUM FINAL</h3>
-            <p style="margin:5px 0 0 0; font-size:11px; opacity:0.8;" id="antrian_summary">Menampilkan data per toko & jenis</p>
-            
-            <!-- TOMBOL X di pojok kanan atas -->
-            <button onclick="document.getElementById('modal_antrian').style.display='none'" 
-                    style="position:absolute; top:12px; right:15px; background:#c0392b; color:white; border:none; border-radius:50%; width:32px; height:32px; font-size:18px; font-weight:bold; cursor:pointer; display:flex; justify-content:center; align-items:center; box-shadow:0 2px 5px rgba(0,0,0,0.3);">
-                ×
-            </button>
-        </div>
-        
-        <!-- CONTENT MODAL -->
-        <div style="padding:15px; overflow-x:auto; flex:1;">
-            <table border="1" style="width:100%; border-collapse:collapse; font-size:11px; text-align:center;">
+    <div style="background:white; border-radius:10px; padding:15px; min-height:100%; position: relative;">
+        <button class="btn-close-modal" onclick="document.getElementById('modal_antrian').style.display='none'">×</button>
+        <h3 style="text-align:center; margin-top:0; color: #2c3e50;">ANTRIAN BELUM FINAL</h3>
+        <hr>
+        <div style="overflow-x:auto;">
+            <table border="1" style="width:100%; border-collapse:collapse; font-size:10px; text-align:center;">
                 <thead style="background:#eee;">
                     <tr>
-                        <th style="padding:8px;">URPICK</th>
-                        <th style="padding:8px;">TOKO</th>
-                        <th style="padding:8px;">JENIS / ITEM</th>
-                        <th style="padding:8px;">ACTION</th>
+                        <th>URPICK</th>
+                        <th>TOKO</th>
+                        <th>KONT / DOS / MN</th>
+                        <th>ACTION</th>
                     </tr>
                 </thead>
                 <tbody id="antrian_body">
-                    <!-- Diisi oleh JavaScript -->
-                </tbody>
+                    </tbody>
             </table>
         </div>
-        
-        <!-- FOOTER MODAL -->
-        <div style="padding:15px; border-top:1px solid #eee; background:#f8f9fa; border-radius:0 0 10px 10px;">
-            <div id="footer_antrian_action" style="display: flex; gap: 10px;">
-                <!-- Tombol akan diisi JavaScript -->
-            </div>
-        </div>
+        <button class="btn-main" style="background:#34495e; width: 100%; margin-top: 20px;" onclick="document.getElementById('modal_antrian').style.display='none'">TUTUP</button>
     </div>
 </div>
 
@@ -919,51 +859,18 @@ function validateScanFisik() {
     const kodeToko = document.getElementById('p_kode').value.toUpperCase();
     const jenisVal = document.getElementById('p_jenis').value;
 
-    // 🔥 FUNGSI: Normalisasi PLU (hapus leading zeros)
-    const normalizePLU = (plu) => {
-        if (!plu) return plu;
-        // Hapus leading zeros, tapi jika semua nol, kembalikan "0"
-        const normalized = String(plu).replace(/^0+/, '');
-        return normalized === '' ? '0' : normalized;
-    };
-
     // 1. IDENTIFIKASI PLU (Bisa Label, Barcode Dos, atau Barcode Item)
     let foundPLU = "";
-    let originalBarcode = scanVal;
-    
     if (scanVal.includes('-')) {
         // Alur Label (Contoh: 18996001401436-UNDEFINED)
         const parts = scanVal.split('-').filter(Boolean);
         foundPLU = (jenisVal === "DOS") ? parts[3] : parts[2];
     } else {
         // Alur Barcode Fisik / Barcode Dos (Murni Angka)
-        const matchMB = dbMasterBarcode.find(m => {
-            const barcodeDos = String(m.barcodeDos || "").trim();
-            const barcodeItem = String(m.barcodeItem || "").trim();
-            
-            // 🔥 BANDINGKAN DENGAN DAN TANPA LEADING ZEROS
-            // Normalisasi kedua sisi untuk perbandingan
-            const normalizedScan = normalizePLU(scanVal);
-            const normalizedDos = normalizePLU(barcodeDos);
-            const normalizedItem = normalizePLU(barcodeItem);
-            
-            return scanVal === barcodeDos || 
-                   scanVal === barcodeItem ||
-                   normalizedScan === normalizedDos ||
-                   normalizedScan === normalizedItem;
-        });
-        
-        if (matchMB) {
-            // Simpan PLU asli dari database (dengan leading zeros jika ada)
-            foundPLU = String(matchMB.plu).trim();
-            console.log("DEBUG Fisik - Match found:", {
-                scanBarcode: scanVal,
-                normalizedScan: normalizePLU(scanVal),
-                dbBarcodeDos: matchMB.barcodeDos,
-                dbBarcodeItem: matchMB.barcodeItem,
-                dbPLU: foundPLU
-            });
-        }
+        const matchMB = dbMasterBarcode.find(m => 
+            scanVal === String(m.barcodeDos).trim() || scanVal === String(m.barcodeItem).trim()
+        );
+        if (matchMB) foundPLU = String(matchMB.plu).trim();
     }
 
     // Jika PLU tidak ditemukan sama sekali
@@ -977,71 +884,38 @@ function validateScanFisik() {
     // 2. CARI DATA DI PICKING (DOS/MANUAL)
     let matchPicking;
     if (jenisVal === "DOS") {
-        matchPicking = dbPickAuto.find(i => {
-            if (i.faktur !== fakturVal || i.kodeToko !== kodeToko) return false;
-            
-            // 🔥 BANDINGKAN PLU DENGAN DAN TANPA LEADING ZEROS
-            const dbPLU = String(i.plu || "").trim();
-            const normalizedFound = normalizePLU(foundPLU);
-            const normalizedDb = normalizePLU(dbPLU);
-            
-            return String(i.plu) === foundPLU || 
-                   normalizedFound === normalizedDb;
-        });
+        matchPicking = dbPickAuto.find(i => i.faktur === fakturVal && i.kodeToko === kodeToko && String(i.plu) === foundPLU);
     } else if (jenisVal === "MANUAL") {
-        matchPicking = dbManual.find(i => {
-            if (i.faktur !== fakturVal) return false;
-            
-            // 🔥 BANDINGKAN PLU DENGAN DAN TANPA LEADING ZEROS
-            const dbPLU = String(i.plu || "").trim();
-            const normalizedFound = normalizePLU(foundPLU);
-            const normalizedDb = normalizePLU(dbPLU);
-            
-            return String(i.plu) === foundPLU || 
-                   normalizedFound === normalizedDb;
-        });
+        matchPicking = dbManual.find(i => i.faktur === fakturVal && String(i.plu) === foundPLU);
     }
 
     if (matchPicking) {
-        // 🔥 GUNAKAN PLU DARI DATABASE (untuk konsistensi)
-        const pluDatabase = String(matchPicking.plu || "").trim();
         const targetAsli = parseInt(matchPicking.qtyData || 0);
-        
-        // Hitung dulu yang sudah masuk ke server/antrian lokal
-        const sudahTerpenuhi = hitungTotalTerScan(pluDatabase, fakturVal, kodeToko, jenisVal);
+        // Penting: Hitung dulu yang sudah masuk ke server/antrian lokal
+        const sudahTerpenuhi = hitungTotalTerScan(foundPLU, fakturVal, kodeToko, jenisVal);
 
-        // CEK VALIDASI OVER
+        // CEK VALIDASI OVER: Jika sudah terpenuhi, jangan izinkan tambah lagi
         if (sudahTerpenuhi >= targetAsli) {
             if (typeof playError === "function") playError();
             Swal.fire({
                 icon: "warning",
                 title: "SUDAH LENGKAP!",
-                text: `PLU ${pluDatabase} sudah ter-scan ${sudahTerpenuhi} dari target ${targetAsli}`
+                text: `PLU ${foundPLU} sudah ter-scan ${sudahTerpenuhi} dari target ${targetAsli}`
             });
         } else {
             // ACTION: ISI DATA KE LAYAR
             fillData(matchPicking);
             
-            // PAKSA QTY KE 1
+            // PAKSA QTY KE 1 (Jangan ditambah, tapi di-set ke 1)
             document.getElementById('p_qty_input').value = 1;
             
-            // Simpan label sesuai apa yang di-scan
+            // Simpan label sesuai apa yang di-scan (Fisik/Label)
             document.getElementById('p_scan_label').value = scanVal;
 
-            // Notifikasi sukses dengan informasi PLU
-            Swal.fire({
-                icon: 'success',
-                title: 'Berhasil!',
-                text: `PLU: ${pluDatabase}`,
-                timer: 800,
-                showConfirmButton: false,
-                toast: true,
-                position: 'top-end'
-            });
-
-            // Langsung simpan otomatis
+            // Langsung simpan otomatis agar tidak perlu klik tombol Simpan
             if (typeof saveData === "function") {
                 saveData();
+                notify(`Berhasil: ${foundPLU}`, "success", "p_scan_fisik");
             }
         }
     } else {
@@ -1054,201 +928,96 @@ function validateScanFisik() {
 }
 
 function validateScanLabel() {
-    let rawScanVal = document.getElementById('p_scan_label').value;
-    
-    // 🔥 NORMALISASI: Hapus spasi berlebih tapi pertahankan struktur
-    const scanVal = rawScanVal
-        .trim()
-        .replace(/\s+/g, ' ')        // Ganti multiple spasi jadi 1 spasi
-        .replace(/\s*-\s*/g, '-')     // Hapus spasi di sekitar tanda hubung
-        .toUpperCase();
-    
-    document.getElementById('p_scan_label').value = scanVal;
+    let rawScanVal = document.getElementById('p_scan_label').value;
+    const scanVal = rawScanVal.replace(/\s+/g, '').toUpperCase().trim();
+    document.getElementById('p_scan_label').value = scanVal;
 
-    const jenisVal = document.getElementById('p_jenis').value;
-    const kodeToko = document.getElementById('p_kode').value.toUpperCase();
-    const fakturVal = document.getElementById('p_faktur').value;
-    const pluAktif = String(document.getElementById('p_plu').value).trim();
+    const jenisVal = document.getElementById('p_jenis').value;
+    const kodeToko = document.getElementById('p_kode').value.toUpperCase();
+    const fakturVal = document.getElementById('p_faktur').value;
+    const pluAktif = String(document.getElementById('p_plu').value).trim();
 
-    if (!scanVal) return;
+    if (!scanVal) return;
 
-    // 🔥 KHUSUS UNTUK MANUAL - DIPISAH AGAR TIDAK MENGGANGGU YANG LAIN
-    if (jenisVal === "MANUAL") {
-        if (!pluAktif || pluAktif === "-") {
-            document.getElementById('p_scan_label').value = "";
-            return Swal.fire({
-                icon: 'warning',
-                title: 'Urutan Salah',
-                text: 'Scan Barcode FISIK barang dulu!',
-                timer: 1500
-            });
-        }
+    if (jenisVal === "DOS" || jenisVal === "MANUAL") {
+        if (!pluAktif || pluAktif === "-") {
+            document.getElementById('p_scan_label').value = "";
+            return Swal.fire("Urutan Salah", "Scan Barcode FISIK barang dulu!", "warning");
+        }
 
-        // 🔥 PERBAIKAN: Split dengan menangani spasi dan multiple separator
-        // Ganti semua spasi dan multiple hubung menjadi single hubung
-        const cleanBarcode = scanVal
-            .replace(/\s+/g, '-')     // Ganti spasi dengan hubung
-            .replace(/-+/g, '-');      // Ganti multiple hubung jadi single hubung
-            
-        const parts = cleanBarcode.split('-').filter(part => part.trim() !== '');
-        
-        console.log("DEBUG Manual - Raw scan:", rawScanVal);
-        console.log("DEBUG Manual - Normalized:", scanVal);
-        console.log("DEBUG Manual - Clean barcode:", cleanBarcode);
-        console.log("DEBUG Manual - Parts:", parts);
-        
-        // 🔥 PERBAIKAN: Deteksi PLU dari bagian AKHIR dengan berbagai kemungkinan
-        let pluDariBarcode = "";
-        
-        if (parts.length >= 2) {
-            // Ambil part terakhir sebagai PLU
-            pluDariBarcode = parts[parts.length - 1];
-        }
-        
-        // 🔥 PERBAIKAN: Ambil bagian faktur (semua parts kecuali yang terakhir)
-        const fakturDariBarcode = parts.slice(0, -1).join('-');
-        
-        console.log("DEBUG Manual - PLU barcode:", pluDariBarcode);
-        console.log("DEBUG Manual - PLU aktif:", pluAktif);
-        console.log("DEBUG Manual - Faktur barcode:", fakturDariBarcode);
-        console.log("DEBUG Manual - Faktur aktif:", fakturVal);
-        
-        // 🔥 PERBAIKAN: Bandingkan PLU (sebagai string, tanpa menghilangkan angka 0 di depan)
-        // Karena PLU bisa berupa angka panjang seperti 123235
-        if (pluDariBarcode !== pluAktif) {
-            if (typeof playError === "function") playError();
-            Swal.fire({
-                icon: 'error',
-                title: 'PLU TIDAK COCOK',
-                html: `Barcode: <b>${pluDariBarcode}</b><br>Fisik: <b>${pluAktif}</b>`,
-                timer: 2000
-            });
-            document.getElementById('p_scan_label').value = "";
-            return;
-        }
-        
-        // 🔥 PERBAIKAN: Validasi faktur (cocokkan dengan berbagai kemungkinan)
-        // Faktur aktif harus ada di dalam fakturDariBarcode ATAU sebaliknya
-        const fakturAktifClean = fakturVal.replace(/\s+/g, '').toUpperCase();
-        const fakturBarcodeClean = fakturDariBarcode.replace(/\s+/g, '').toUpperCase();
-        
-        const isFakturMatch = 
-            fakturBarcodeClean.includes(fakturAktifClean) || 
-            fakturAktifClean.includes(fakturBarcodeClean) ||
-            fakturBarcodeClean === fakturAktifClean;
-        
-        if (!isFakturMatch) {
-            if (typeof playError === "function") playError();
-            Swal.fire({
-                icon: 'error',
-                title: 'FAKTUR TIDAK COCOK',
-                html: `Barcode: <b>${fakturDariBarcode}</b><br>Aktif: <b>${fakturVal}</b>`,
-                timer: 2000
-            });
-            document.getElementById('p_scan_label').value = "";
-            return;
-        }
-        
-        // SEMUA VALIDASI LOLOS
-        document.getElementById('p_qty_input').value = 1;
-        
-        // Notifikasi sukses
-        Swal.fire({
-            icon: 'success',
-            title: 'Valid!',
-            text: `PLU ${pluAktif} cocok`,
-            timer: 800,
-            showConfirmButton: false,
-            toast: true,
-            position: 'top-end'
-        });
-        
-        // Fokus ke scan fisik untuk lanjut
-        setTimeout(() => { 
-            const scanFisik = document.getElementById('p_scan_fisik');
-            if (scanFisik) {
-                scanFisik.focus();
-                scanFisik.select();
-            }
-        }, 300);
-        
-        return; // PENTING: return agar tidak lanjut ke kode berikutnya
-    }
+        const parts = scanVal.split('-').filter(Boolean);
+        let pluLabel = (jenisVal === "DOS") ? parts[3] : parts[2];
+        let tokoLabel = (jenisVal === "DOS") ? (parts[2] || "").toUpperCase() : kodeToko;
 
-    // 🔥 KODE ORIGINAL UNTUK DOS (TETAP SAMA)
-    else if (jenisVal === "DOS") {
-        // ... kode DOS tetap sama ...
-        if (!pluAktif || pluAktif === "-") {
-            document.getElementById('p_scan_label').value = "";
-            return Swal.fire("Urutan Salah", "Scan Barcode FISIK barang dulu!", "warning");
-        }
+        if (jenisVal === "DOS" && tokoLabel !== kodeToko) {
+            if (typeof playError === "function") playError();
+            document.getElementById('p_scan_label').value = "";
+            return Swal.fire("SALAH TOKO", `Label: ${tokoLabel}, Aktif: ${kodeToko}`, "error");
+        }
 
-        const parts = scanVal.split('-').filter(Boolean);
-        let pluLabel = parts[3];
-        let tokoLabel = (parts[2] || "").toUpperCase();
+        if (String(pluLabel) === pluAktif) {
+            document.getElementById('p_qty_input').value = 1;
+            setTimeout(() => { document.getElementById('p_scan_fisik').focus(); }, 100);
+        } else {
+            if (typeof playError === "function") playError();
+            Swal.fire("PLU TIDAK COCOK", `Label: ${pluLabel} | Fisik: ${pluAktif}`, "error");
+            document.getElementById('p_scan_label').value = "";
+        }
 
-        if (tokoLabel !== kodeToko) {
-            if (typeof playError === "function") playError();
-            document.getElementById('p_scan_label').value = "";
-            return Swal.fire("SALAH TOKO", `Label: ${tokoLabel}, Aktif: ${kodeToko}`, "error");
-        }
+    } else if (jenisVal === "KONTAINER") {
+        const parts = scanVal.split('-').filter(Boolean);
+        const noKontainerLabel = parts[0] ? parts[0].toUpperCase() : "";
+        const kodeTokoLabel = parts[1] ? parts[1].toUpperCase() : "";
 
-        if (String(pluLabel) === pluAktif) {
-            document.getElementById('p_qty_input').value = 1;
-            setTimeout(() => { document.getElementById('p_scan_fisik').focus(); }, 100);
-        } else {
-            if (typeof playError === "function") playError();
-            Swal.fire("PLU TIDAK COCOK", `Label: ${pluLabel} | Fisik: ${pluAktif}`, "error");
-            document.getElementById('p_scan_label').value = "";
-        }
-    }
+        if (kodeTokoLabel !== kodeToko) {
+            document.getElementById('p_scan_label').value = "";
+            if (typeof playError === "function") playError(); 
+            return Swal.fire({ icon: 'error', title: 'SALAH TOKO!', text: `Label Toko ${kodeTokoLabel}, Aktif Toko ${kodeToko}` });
+        }
 
-    // 🔥 KODE ORIGINAL UNTUK KONTAINER (TETAP SAMA)
-    else if (jenisVal === "KONTAINER") {
-        // ... kode KONTAINER tetap sama ...
-        const parts = scanVal.split('-').filter(Boolean);
-        const noKontainerLabel = parts[0] ? parts[0].toUpperCase() : "";
-        const kodeTokoLabel = parts[1] ? parts[1].toUpperCase() : "";
+        // --- VALIDASI ANTI-DOUBLE KONTAINER (ANTRIAN + SERVER) ---
+        let antrian = JSON.parse(localStorage.getItem('q_polcek') || "[]");
+        
+        // 1. Cek Antrian Lokal
+        const diAntrian = antrian.find(item => item.faktur === fakturVal && item.kode === kodeToko && item.barcode.toUpperCase().includes(noKontainerLabel));
+        
+        // 2. Cek Database Server (dbSudahPolcek)
+        const diServer = dbSudahPolcek.find(item => item.faktur === fakturVal && item.kode === kodeToko && item.barcode.toUpperCase().includes(noKontainerLabel));
 
-        if (kodeTokoLabel !== kodeToko) {
-            document.getElementById('p_scan_label').value = "";
-            if (typeof playError === "function") playError(); 
-            return Swal.fire({ icon: 'error', title: 'SALAH TOKO!', text: `Label Toko ${kodeTokoLabel}, Aktif Toko ${kodeToko}` });
-        }
+        if (diAntrian || diServer) {
+            document.getElementById('p_scan_label').value = "";
+            if (typeof playError === "function") playError();
+            return Swal.fire({ icon: 'warning', title: 'SUDAH SCAN!', text: `Kontainer ${noKontainerLabel} sudah pernah discan/dikirim.` });
+        }
 
-        let antrian = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-        const diAntrian = antrian.find(item => item.faktur === fakturVal && item.kode === kodeToko && item.barcode.toUpperCase().includes(noKontainerLabel));
-        const diServer = dbSudahPolcek.find(item => item.faktur === fakturVal && item.kode === kodeToko && item.barcode.toUpperCase().includes(noKontainerLabel));
+        const match = dbPickAuto.find(i => i.faktur === fakturVal && i.kodeToko === kodeToko && (i.kontainer || "").toUpperCase() === noKontainerLabel);
 
-        if (diAntrian || diServer) {
-            document.getElementById('p_scan_label').value = "";
-            if (typeof playError === "function") playError();
-            return Swal.fire({ icon: 'warning', title: 'SUDAH SCAN!', text: `Kontainer ${noKontainerLabel} sudah pernah discan/dikirim.` });
-        }
+        if (match) { 
+            fillData(match); 
+            document.getElementById('p_qty_input').value = 1; 
+            document.getElementById('p_qty_input').readOnly = true;
+            document.getElementById('p_scan_label').value = scanVal.toUpperCase();
+            setTimeout(() => { saveData(); }, 300);
+        } else { 
+            if (typeof playError === "function") playError();
+            notify(" NO KONTAINER TIDAK ADA DI DATA!", "error", "p_scan_label"); 
+            document.getElementById('p_scan_label').value = ""; 
+        }
+    
 
-        const match = dbPickAuto.find(i => i.faktur === fakturVal && i.kodeToko === kodeToko && (i.kontainer || "").toUpperCase() === noKontainerLabel);
 
-        if (match) { 
-            fillData(match); 
-            document.getElementById('p_qty_input').value = 1; 
-            document.getElementById('p_qty_input').readOnly = true;
-            document.getElementById('p_scan_label').value = scanVal.toUpperCase();
-            setTimeout(() => { saveData(); }, 300);
-        } else { 
-            if (typeof playError === "function") playError();
-            notify(" NO KONTAINER TIDAK ADA DI DATA!", "error", "p_scan_label"); 
-            document.getElementById('p_scan_label').value = ""; 
-        }
-    }
-
-    // 🔥 KODE ORIGINAL UNTUK TAG I (TETAP SAMA)
-    else if (jenisVal === "TAG I") {
+    // --- ALUR C: UNTUK TAG I ---
+} else if (jenisVal === "TAG I") {
+        // Isi data minimal di form
         document.getElementById('p_plu').value = "TAG-I";
         document.getElementById('p_scan_label').value = scanVal || "TAG-I";
         document.getElementById('p_descp').value = "PENDATAAN TAG I";
         document.getElementById('p_qty_input').value = 1;
-        document.getElementById('p_qty_data').value = 0;
+        document.getElementById('p_qty_data').value = 0; // Tidak ada target
         document.getElementById('p_zona').value = "-";
+
+        // Berikan notifikasi singkat bahwa data masuk antrian
+        // Lalu panggil saveData() tapi biarkan logika else yang bekerja (masuk LocalStorage)
         setTimeout(() => { saveData(); }, 300);
     }
 }
@@ -1541,35 +1310,25 @@ function clearAllFieldsInternal() {
     }
 
     function updateBadge() {
-    // Ambil data antrean dari LocalStorage
+    // 1. Ambil data antrean dari LocalStorage
     const allLocalData = JSON.parse(localStorage.getItem('q_polcek') || "[]");
     
-    // 🔥 PERBAIKAN: Hitung berdasarkan kombinasi unik (faktur + kode + jenis)
-    // Gunakan Set dengan composite key
-    const uniqueGroups = new Set();
-    
-    allLocalData.forEach(item => {
-        // Buat key unik: faktur|kode|jenis
-        const compositeKey = `${item.faktur}|${item.kode}|${item.jenis}`;
-        uniqueGroups.add(compositeKey);
-    });
-    
-    // Jumlah antrean = jumlah group unik
-    const jumlahAntrean = uniqueGroups.size;
+    // 2. Hitung jumlah toko (faktur unik) dalam antrean
+    // Menggunakan Set agar jika 1 toko punya banyak item scan, tetap dihitung 1 antrean toko
+    const uniqueFakturs = [...new Set(allLocalData.map(item => item.faktur))];
+    const jumlahAntrean = uniqueFakturs.length;
 
-    // Update angka di Badge Besar (jika ada)
+    // 3. Update angka di Badge Besar (Sticky Badge bawah)
     const badgeBesar = document.getElementById('antrian_badge');
     if (badgeBesar) {
         badgeBesar.innerText = jumlahAntrean > 0 ? `ANTREAN: ${jumlahAntrean} TOKO` : "BELUM ADA ANTREAN";
     }
 
-    // Update angka di Tombol Navigasi (badge_small)
+    // 4. Update angka di Tombol Navigasi (badge_small)
     const badgeKecil = document.getElementById('badge_small');
     if (badgeKecil) {
         badgeKecil.innerText = jumlahAntrean;
     }
-    
-    console.log(`Badge updated: ${jumlahAntrean} groups from ${allLocalData.length} items`);
 }
 
     function focusToNext() {
@@ -1630,6 +1389,7 @@ async function showMonitoring() {
         return;
     }
 
+    // Jalankan sinkronisasi yang sudah include logika merge
     await sinkronDataServer();
 
     const tglTarget = String(tglRaw).substring(0, 10).trim();
@@ -1638,7 +1398,7 @@ async function showMonitoring() {
     const clean = v => String(v || "").trim().toUpperCase();
     let monitorMap = {};
 
-    // MASTER DATA
+    // --- 1️⃣ FILTER TARGET (MASTER DATA) ---
     const masterData = [
         ...dbPickAuto.map(d => ({ ...d, src: 'PA' })),
         ...dbManual.map(d => ({ ...d, src: 'MN' }))
@@ -1654,16 +1414,15 @@ async function showMonitoring() {
         if (!kode) return;
 
         if (!monitorMap[kode]) {
-    monitorMap[kode] = { 
-        urpick: String(item.urpick || ""),
-        kode: kode,
-        namaToko: item.namaToko || "", // 🔥 TAMBAHKAN INI
-        tKN: 0, tDS: 0, tMN: 0, 
-        sKN: 0, sDS: 0, sMN: 0, 
-        hasRemark: false,
-        uKN: [], uDS: [], uMN: [] 
-    };
-}
+            monitorMap[kode] = { 
+                urpick: item.urpick || "", 
+                kode: kode, 
+                tKN: 0, tDS: 0, tMN: 0, 
+                sKN: 0, sDS: 0, sMN: 0, 
+                hasRemark: false,
+                uKN: [], uDS: [], uMN: [] 
+            };
+        }
 
         if (item.src === 'MN') {
             monitorMap[kode].tMN += parseInt(item.qtyData || 0);
@@ -1677,337 +1436,99 @@ async function showMonitoring() {
         }
     });
 
-    // DATA SCAN
+    // --- 2️⃣ REALISASI DARI SCAN (Membaca dbSudahPolcek yang sudah di-merge) ---
     dbSudahPolcek.forEach(s => {
         const tglScan = String(s.tgl || "").substring(0, 10).trim();
         if (tglScan !== tglTarget) return; 
 
         const kode = clean(s.kode);
         const jenis = clean(s.jenis);
+        // Jika data dari lokal, beri tanda "SAYA", jika dari server ambil nama petugas
         const pgw = s.petugas || "SAYA"; 
 
         if (monitorMap[kode]) {
             if (jenis === "KONTAINER") {
                 monitorMap[kode].sKN += parseInt(s.qty_scan || 0);
-                if (pgw && !monitorMap[kode].uKN.includes(pgw)) monitorMap[kode].uKN.push(pgw);
+                if (!monitorMap[kode].uKN.includes(pgw)) monitorMap[kode].uKN.push(pgw);
             } 
             else if (jenis === "DOS") {
                 monitorMap[kode].sDS += parseInt(s.qty_scan || 0);
-                if (pgw && !monitorMap[kode].uDS.includes(pgw)) monitorMap[kode].uDS.push(pgw);
+                if (!monitorMap[kode].uDS.includes(pgw)) monitorMap[kode].uDS.push(pgw);
             } 
             else if (jenis === "MANUAL") {
                 monitorMap[kode].sMN += parseInt(s.qty_scan || 0);
-                if (pgw && !monitorMap[kode].uMN.includes(pgw)) monitorMap[kode].uMN.push(pgw);
+                if (!monitorMap[kode].uMN.includes(pgw)) monitorMap[kode].uMN.push(pgw);
             }
 
             if (clean(s.keterangan) !== "") monitorMap[kode].hasRemark = true;
         }
     });
 
-    
-window.lastMonitorData = monitorMap;
     renderMonitorTable(monitorMap);
-    
     document.getElementById('modal_monitor').style.display = 'block';
 }
 
 function renderMonitorTable(dataMap) {
-    const totalContainer = document.getElementById('total_card_container');
-    const contentContainer = document.getElementById('monitor_content');
-    
-    if (!totalContainer || !contentContainer) return;
-    
-    // Hitung total
-    const total = Object.values(dataMap).reduce((acc, d) => {
-        acc.tKN += d.tKN || 0;
-        acc.sKN += d.sKN || 0;
-        acc.tDS += d.tDS || 0;
-        acc.sDS += d.sDS || 0;
-        acc.tMN += d.tMN || 0;
-        acc.sMN += d.sMN || 0;
-        acc.totalToko++;
-        return acc;
-    }, { tKN:0, sKN:0, tDS:0, sDS:0, tMN:0, sMN:0, totalToko:0 });
+    const container = document.getElementById('monitor_content');
+    let html = `<table class="table-monitor" style="width:100%; border-collapse:collapse; font-size:11px;">
+        <thead>
+            <tr style="background:#2c3e50; color:white;">
+                <th>URPICK</th>
+                <th>TOKO</th>
+                <th>KN (T/S)<br><small>USER</small></th>
+                <th>DS (T/S)<br><small>USER</small></th>
+                <th>MN (T/S)<br><small>USER</small></th>
+                <th>STAT</th>
+            </tr>
+        </thead>
+        <tbody>`;
 
-    // Hitung progress
-    const totalTarget = total.tKN + total.tDS + total.tMN;
-    const totalScan = total.sKN + total.sDS + total.sMN;
-    const progress = totalTarget > 0 ? Math.round((totalScan / totalTarget) * 100) : 0;
-    const sisa = totalTarget - totalScan;
+    Object.values(dataMap).forEach(d => {
+        const isAllMatch = (d.tKN === d.sKN) && (d.tDS === d.sDS) && (d.tMN === d.sMN);
+        let rowBg = isAllMatch ? "#d4edda" : (d.hasRemark ? "#ffeeba" : "white");
+        let statusIcon = isAllMatch ? "✅" : (d.hasRemark ? "⚠️" : "⏳");
 
-    // TOTAL CARD
-    totalContainer.innerHTML = `
-        <div style="text-align:center; margin-bottom:5px;">
-            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:5px; background:linear-gradient(135deg, #2c3e50, #34495e); color:white; padding:10px; border-radius:8px; margin-bottom:5px;">
-                <div>
-                    <div style="font-size:10px;">TOKO</div>
-                    <div style="font-size:20px; font-weight:bold;">${total.totalToko}</div>
-                </div>
-                <div>
-                    <div style="font-size:10px;">PROGRESS</div>
-                    <div style="font-size:20px; font-weight:bold;">${progress}%</div>
-                </div>
-                <div>
-                    <div style="font-size:10px;">SISA</div>
-                    <div style="font-size:20px; font-weight:bold; color:#ffaa00;">${sisa}</div>
-                </div>
-            </div>
-            
-            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:5px; background:#f8f9fa; padding:8px; border-radius:8px; font-size:12px;">
-                <div><span style="font-weight:bold;">KN:</span> ${total.tKN}/${total.sKN}</div>
-                <div><span style="font-weight:bold;">DOS:</span> ${total.tDS}/${total.sDS}</div>
-                <div><span style="font-weight:bold;">MN:</span> ${total.tMN}/${total.sMN}</div>
-            </div>
-        </div>
-    `;
-
-    // Konversi ke array dan sortir berdasarkan URPICK
-    let dataArray = Object.values(dataMap).map(d => ({
-        ...d,
-        urpick: String(d.urpick || ""),
-        kode: String(d.kode || ""),
-        // 🔥 Ambil nama toko dari dataMap (perlu ditambahkan di showMonitoring)
-        namaToko: String(d.namaToko || ""),
-        urpickNum: parseInt(String(d.urpick).replace(/[^0-9]/g, '')) || 0
-    }));
-
-    // Sorting default URPICK kecil ke besar
-    dataArray.sort((a, b) => a.urpickNum - b.urpickNum);
-
-    // 🔥 FUNGSI: Ambil inisial toko dari nama toko (4 huruf dalam [ ])
-    const getInisialToko = (namaToko) => {
-        if (!namaToko) return '';
-        
-        // Cari pola dalam kurung siku [INISIAL]
-        const match = namaToko.match(/\[([^\]]+)\]/);
-        if (match && match[1]) {
-            // Ambil 4 huruf pertama dari dalam kurung
-            return match[1].substring(0, 4).toUpperCase();
-        }
-        
-        // Jika tidak ada kurung, ambil 4 huruf pertama dari nama
-        return namaToko.replace(/[^A-Za-z]/g, '').substring(0, 4).toUpperCase();
-    };
-
-    // 🔥 FUNGSI: Ambil nama depan petugas
-    const getNamaDepan = (namaLengkap) => {
-        if (!namaLengkap) return '';
-        return namaLengkap.split(' ')[0];
-    };
-
-    // 🔥 FUNGSI: Format user list di BARIS BARU
-    const formatUserList = (users) => {
-        if (!users || users.length === 0) return '';
-        
-        const unique = [...new Set(users)].filter(u => u && u.trim() !== '');
-        if (unique.length === 0) return '';
-        
-        const namaDepan = unique.map(u => getNamaDepan(u));
-        const displayNama = namaDepan.length > 1 
-            ? namaDepan.join(' & ') 
-            : namaDepan[0];
-        
-        return `<span style="color:#2c3e50; font-size:8px; display:block; margin-top:2px; font-weight:normal;">${displayNama}</span>`;
-    };
-
-    // TABLE HEADER
-    let tableHtml = `
-        <div style="background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.1); margin-top:8px;">
-            <table style="width:100%; border-collapse:collapse; font-size:11px;">
-                <thead>
-                    <tr style="background:#2c3e50; color:white;">
-                        <th style="padding:8px 4px; text-align:center; width:10%;">URP</th>
-                        <th style="padding:8px 4px; text-align:left; width:15%;">TOKO</th>
-                        <th style="padding:8px 4px; text-align:center; width:20%;">KN</th>
-                        <th style="padding:8px 4px; text-align:center; width:20%;">DOS</th>
-                        <th style="padding:8px 4px; text-align:center; width:20%;">MN</th>
-                        <th style="padding:8px 4px; text-align:center; width:5%;">ST</th>
-                    </tr>
-                </thead>
-                <tbody>`;
-
-    dataArray.forEach(d => {
-        const tKN = d.tKN || 0;
-        const sKN = d.sKN || 0;
-        const tDS = d.tDS || 0;
-        const sDS = d.sDS || 0;
-        const tMN = d.tMN || 0;
-        const sMN = d.sMN || 0;
-        
-        // 🔥 Ambil inisial toko
-        const inisialToko = getInisialToko(d.namaToko);
-        
-        // Warna baris
-        let rowBg = '#ffffff';
-        let statusIcon = '✅';
-        let statusColor = '#27ae60';
-        
-        if (tKN === 0 && tDS === 0 && tMN === 0) {
-            rowBg = '#f8f9fa';
-            statusIcon = '⏸️';
-            statusColor = '#7f8c8d';
-        } else if (tKN === sKN && tDS === sDS && tMN === sMN) {
-            rowBg = '#f0fff4';
-            statusIcon = '✅';
-            statusColor = '#27ae60';
-        } else if (d.hasRemark) {
-            rowBg = '#fff9e6';
-            statusIcon = '⚠️';
-            statusColor = '#f39c12';
-        } else {
-            rowBg = '#fff0f0';
-            statusIcon = '⏳';
-            statusColor = '#c0392b';
-        }
-
-        // Format angka + nama di bawah
-        const formatAngka = (target, scan, users) => {
-            if (target === 0) {
-                return `<span style="color:#95a5a6;">0/0</span>`;
-            }
-            
-            const color = target > scan ? '#c0392b' : '#27ae60';
-            let html = `<span style="color:${color}; font-weight:bold;">${target}</span><span style="color:#7f8c8d;">/${scan}</span>`;
-            html += formatUserList(users);
-            return html;
+        const formatCell = (t, s, users) => {
+            const color = (t === s && t !== 0) ? 'black' : (s > t ? 'orange' : (s === 0 ? '#bdc3c7' : 'red'));
+            const userList = (users && users.length > 0) ? `<br><span style="color:#7f8c8d; font-size:9px;">${users.join(",")}</span>` : "";
+            return `<span style="color: ${color}; font-weight:bold;">${t}/${s}</span>${userList}`;
         };
 
-        tableHtml += `
-            <tr style="background-color: ${rowBg}; border-bottom:1px solid #e9ecef;">
-                <td style="padding:8px 4px; text-align:center; font-weight:bold;">${d.urpick || '-'}</td>
-                <td style="padding:8px 4px; text-align:left;">
-                    <b>${d.kode || '-'}</b>
-                    ${inisialToko ? `<span style="color:#7f8c8d; font-size:8px; display:block; margin-top:2px;">${inisialToko}</span>` : ''}
-                </td>
-                <td style="padding:8px 4px; text-align:center;">${formatAngka(tKN, sKN, d.uKN)}</td>
-                <td style="padding:8px 4px; text-align:center;">${formatAngka(tDS, sDS, d.uDS)}</td>
-                <td style="padding:8px 4px; text-align:center;">${formatAngka(tMN, sMN, d.uMN)}</td>
-                <td style="padding:8px 4px; text-align:center; font-size:16px; color:${statusColor};">${statusIcon}</td>
+        html += `
+            <tr style="background-color: ${rowBg}; border-bottom:1px solid #eee; text-align:center;">
+                <td>${d.urpick}</td>
+                <td style="text-align:left"><b>${d.kode}</b></td>
+                <td>${formatCell(d.tKN, d.sKN, d.uKN)}</td>
+                <td>${formatCell(d.tDS, d.sDS, d.uDS)}</td>
+                <td>${formatCell(d.tMN, d.sMN, d.uMN)}</td>
+                <td>${statusIcon}</td>
             </tr>`;
     });
-
-    tableHtml += `</tbody></table></div>`;
     
-    // Legenda
-    tableHtml += `
-        <div style="margin-top:10px; display:flex; gap:12px; justify-content:center; font-size:9px; padding:10px; background:white; border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-            <span><span style="color:#27ae60;">✅</span> Komplit</span>
-            <span><span style="color:#c0392b;">⏳</span> Kurang</span>
-            <span><span style="color:#f39c12;">⚠️</span> Selisih</span>
-            <span><span style="color:#7f8c8d;">⏸️</span> No Target</span>
-        </div>`;
-
-    contentContainer.innerHTML = tableHtml;
+    html += `</tbody></table>`;
+    container.innerHTML = html;
 }
 
-// 🔥 FUNGSI REFRESH (tanpa sorting)
-async function refreshMonitoringData() {
-    const loader = document.getElementById('loader');
-    const modalMonitor = document.getElementById('modal_monitor');
-
-    modalMonitor.style.display = 'none';
-    loader.style.display = 'flex';
-
-    try {
-        const res = await fetch(G_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: "getAllData" })
-        });
-        const out = await res.json();
-
-        if (out.status === "success") {
-            dbSudahPolcek = (out.dataSudahPolcek || []).map(r => ({
-                tgl: String(r.tgl || "").substring(0, 10),
-                kode: String(r.kode || "").trim().toUpperCase(),
-                jenis: String(r.jenis || "").trim().toUpperCase(),
-                barcode: String(r.barcode || "").trim().toUpperCase(), 
-                qty_scan: Number(r.qty_scan || 0)
-            }));
-        }
-    } catch (e) {
-        Swal.fire("Gagal", "Koneksi Bermasalah", "error");
-    } finally {
-        loader.style.display = 'none';
-        showMonitoring(); 
-    }
-}
-
-function closeMonitoring() {
-    // 1. Tutup semua modal
+    function closeMonitoring() {
+    // 1. Tutup semua kemungkinan modal yang terbuka
     if (document.getElementById('modal_report')) document.getElementById('modal_report').style.display = 'none';
     if (document.getElementById('modal_monitor')) document.getElementById('modal_monitor').style.display = 'none';
 
-    // 2. Ambil data dengan proteksi Trim
+    // 2. CEK LOGIKA POSISI: Apakah sedang proses scan?
     const fakturAktif = document.getElementById('p_faktur').value;
-    const jenisRaw = document.getElementById('p_jenis').value;
-    const jenis = String(jenisRaw || "").trim().toUpperCase();
 
     if (fakturAktif !== "") {
-        // Tampilkan kontainer utama
+        // JIKA FAKTUR TERISI: Berarti user tadi sedang di area Scan.
+        // Kembalikan tampilan ke Scan, bukan Header.
         document.getElementById('group_header').style.display = 'none';
         document.getElementById('group_scan').style.display = 'block';
         
-        // 🔥 PERBAIKAN: Ganti ID sesuai dengan HTML yang ada
-        const rowScanLabel = document.getElementById('row_scan_label'); // ← ini yang benar
-        const areaFisik = document.getElementById('area_fisik');         // ← ini yang benar
-        // const divQty = document.getElementById('div_qty_manual');     // ← ini tidak ada di HTML
-
-        // Sembunyikan SEMUA dulu untuk reset state
-        if (rowScanLabel) rowScanLabel.style.display = 'none';
-        if (areaFisik) areaFisik.style.display = 'none';
-        
-        // Untuk kelompok Non-Scan, kita atur qty_input bisa diedit
-        const qtyInput = document.getElementById('p_qty_input');
-        const kelompokNonScan = ["NON-PTL", "TELUR", "MKT", "ATK GS", "MATERAI"];
-
-        // LOGIKA BARU: Sesuai dengan struktur HTML yang ada
-        if (jenis === "DOS" || jenis === "MANUAL") {
-            // Untuk DOS/MANUAL: Tampilkan area fisik
-            if (areaFisik) {
-                areaFisik.style.display = 'block';
-                console.log("DEBUG: Menampilkan area_fisik untuk jenis " + jenis);
-            }
-            // Label juga perlu ditampilkan karena row_scan_label berisi input scan_label
-            if (rowScanLabel) {
-                rowScanLabel.style.display = 'flex'; // Pakai flex karena di CSS pakai display:flex
-            }
-            
-            // Atur qty_input readonly
-            if (qtyInput) {
-                qtyInput.readOnly = true;
-                qtyInput.style.background = "#eeeeee";
-            }
-        } 
-        else if (kelompokNonScan.includes(jenis)) {
-            // Untuk Non-Scan: Sembunyikan area fisik, tampilkan qty manual
-            if (rowScanLabel) rowScanLabel.style.display = 'none';
-            if (areaFisik) areaFisik.style.display = 'none';
-            
-            // Qty input bisa diedit
-            if (qtyInput) {
-                qtyInput.readOnly = false;
-                qtyInput.style.background = "white";
-                document.getElementById('p_scan_label').value = "NON-SCAN";
-            }
-        } 
-        else {
-            // Untuk KONTAINER, TAG I: Tampilkan hanya scan label
-            if (rowScanLabel) {
-                rowScanLabel.style.display = 'flex';
-            }
-            if (areaFisik) areaFisik.style.display = 'none';
-            
-            // Qty input readonly
-            if (qtyInput) {
-                qtyInput.readOnly = true;
-                qtyInput.style.background = "#eeeeee";
-            }
+        // Kembalikan fokus ke input scan sesuai jenisnya
+        if (typeof fokusKeInputScan === "function") {
+            fokusKeInputScan(); 
         }
-        
-        // Jalankan fokus kursor
-        fokusKeInputScan();
-        
     } else {
+        // JIKA FAKTUR KOSONG: Kembali ke menu awal (Header)
         document.getElementById('group_header').style.display = 'block';
         document.getElementById('group_scan').style.display = 'none';
         setTimeout(() => { document.getElementById('p_kode').focus(); }, 300);
@@ -2346,6 +1867,7 @@ else if (r.target === "N/A" || r.scan === r.target) {
             if (namaPetugas === userAktif) {
                 let li = document.createElement('li');
                 li.style.fontSize = "10px";
+                li.innerHTML = `<b>${item.faktur}</b>: ${item.plu} (${item.qty_scan} pcs)`;
                 listAntrian.appendChild(li);
             }
         });
@@ -2736,104 +2258,40 @@ function showAntrianModal() {
     const tbody = document.getElementById('antrian_body');
     tbody.innerHTML = "";
 
-    // Update summary
-    const summary = document.getElementById('antrian_summary');
-    if (summary) {
-        summary.innerText = `Total ${scanDB.length} item dalam antrian`;
-    }
+    // 1. Bersihkan area tombol bawah agar tidak duplikat saat dibuka berkali-kali
+    const oldContainer = document.getElementById('footer_antrian_action');
+    if (oldContainer) oldContainer.remove();
 
     if (scanDB.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='4' style='padding:30px; text-align:center; color:#7f8c8d;'>Tidak ada antrian data</td></tr>";
-        
-        // Sembunyikan footer action jika kosong
-        const footerAction = document.getElementById('footer_antrian_action');
-        if (footerAction) footerAction.innerHTML = '';
+        tbody.innerHTML = "<tr><td colspan='4' style='padding:20px;'>Tidak ada antrian data</td></tr>";
     } else {
-        // 🔥 PERBAIKAN: Group berdasarkan (faktur + kode + jenis)
-        const groups = new Map();
-        
+        const grouped = {};
         scanDB.forEach(item => {
-            const key = `${item.faktur}|${item.kode}|${item.jenis}`;
-            
-            if (!groups.has(key)) {
-                groups.set(key, {
+            if (!grouped[item.faktur]) {
+                grouped[item.faktur] = {
                     urpick: item.urpick || "-",
                     kode: item.kode,
                     nama: item.nama || "",
                     tgl: item.tgl,
-                    faktur: item.faktur,
-                    jenis: item.jenis,
-                    items: [item]
-                });
-            } else {
-                const group = groups.get(key);
-                group.items.push(item);
+                    jenis: item.jenis
+                };
             }
         });
 
-        // Konversi Map ke array dan urutkan
-        const groupArray = Array.from(groups.values());
-        
-        // Urut berdasarkan URPICK (numerik)
-        groupArray.sort((a, b) => {
-            const numA = parseInt(String(a.urpick).replace(/[^0-9]/g, '')) || 0;
-            const numB = parseInt(String(b.urpick).replace(/[^0-9]/g, '')) || 0;
-            return numA - numB;
-        });
-
-        // Tampilkan每组
-        groupArray.forEach(group => {
-            // Warna border berdasarkan jenis
-            let borderColor = '#3498db'; // default biru
-            let bgColor = '#f8f9fa';
-            
-            switch(group.jenis) {
-                case 'KONTAINER':
-                    borderColor = '#2980b9';
-                    bgColor = '#ebf5fb';
-                    break;
-                case 'DOS':
-                    borderColor = '#27ae60';
-                    bgColor = '#eafaf1';
-                    break;
-                case 'MANUAL':
-                    borderColor = '#e67e22';
-                    bgColor = '#fef5e7';
-                    break;
-                case 'TAG I':
-                    borderColor = '#8e44ad';
-                    bgColor = '#f5eef8';
-                    break;
-                default:
-                    borderColor = '#7f8c8d';
-                    bgColor = '#f8f9fa';
-            }
-            
-            const itemCount = group.items.length;
-            const totalQty = group.items.reduce((sum, item) => sum + (item.qty_scan || 0), 0);
-            
-            const row = `<tr style="background-color: ${bgColor}; border-left: 4px solid ${borderColor};">
-                <td style="padding:10px; font-weight:bold;">${group.urpick}</td>
-                <td style="padding:10px; text-align:left;">
-                    <b>${group.kode}</b><br>
-                    <span style="font-size:9px; color:#555;">${group.nama}</span>
-                </td>
-                <td style="padding:10px;">
-                    <span style="background:${borderColor}; color:white; padding:3px 8px; border-radius:12px; font-size:10px; font-weight:bold; display:inline-block; margin-bottom:3px;">
-                        ${group.jenis}
-                    </span>
-                    <br>
-                    <span style="font-size:10px; color:#2c3e50;">
-                    </span>
-                </td>
-                <td style="padding:10px;">
-                    <div style="display:flex; flex-direction:column; gap:5px;">
-                        <button onclick="pilihAntrian('${group.tgl}', '${group.kode}', '${group.faktur}', '${group.jenis}')" 
-                                style="background:#27ae60; color:white; border:none; padding:8px; border-radius:4px; font-size:10px; cursor:pointer; width:100%; font-weight:bold;">
-                            PROSES
+        Object.keys(grouped).forEach(faktur => {
+            const g = grouped[faktur];
+            const row = `<tr>
+                <td>${g.urpick}</td>
+                <td style="text-align:left; padding:5px;"><b>${g.kode}</b><br>${g.nama}</td>
+                <td>${g.jenis}</td>
+                <td>
+                    <div style="display:flex; flex-direction:column; gap:3px; padding:5px;">
+                        <button onclick="pilihAntrian('${g.tgl}', '${g.kode}', '${faktur}', '${g.jenis}')" 
+                                style="background:#27ae60; color:white; border:none; padding:5px; border-radius:3px; font-size:9px; cursor:pointer;">
+                            PROSES FINAL
                         </button>
-                        <button onclick="hapusSatuAntrian('${group.faktur}', '${group.kode}', '${group.jenis}')" 
-                                style="background:#e74c3c; color:white; border:none; padding:5px; border-radius:4px; font-size:9px; cursor:pointer; width:100%;">
+                        <button onclick="hapusSatuAntrian('${faktur}')" 
+                                style="background:#e74c3c; color:white; border:none; padding:5px; border-radius:3px; font-size:9px; cursor:pointer;">
                             HAPUS
                         </button>
                     </div>
@@ -2842,74 +2300,73 @@ function showAntrianModal() {
             tbody.innerHTML += row;
         });
 
-        // Footer action buttons
-        const footerAction = document.getElementById('footer_antrian_action');
-        if (footerAction) {
-            footerAction.innerHTML = `
-                <button onclick="hapusSemuaAntrian()" style="background: #c0392b; flex: 1; padding: 12px; border-radius: 5px; color: white; border: none; font-weight: bold; cursor: pointer; font-size:11px;">
-                    🗑️ BERSIHKAN SEMUA
-                </button>
-                <button onclick="document.getElementById('modal_antrian').style.display='none'" style="background: #34495e; flex: 1; padding: 12px; border-radius: 5px; color: white; border: none; font-weight: bold; cursor: pointer; font-size:11px;">
-                    TUTUP
-                </button>
-            `;
+        // 2. LOGIKA TOMBOL BERDAMPINGAN
+        // Cari tombol TUTUP asli
+        const btnTutupAsli = document.querySelector('#modal_antrian .btn-main[onclick*="modal_antrian"]');
+        
+        if (btnTutupAsli) {
+            // Sembunyikan tombol tutup yang lama agar kita pindahkan ke container baru
+            btnTutupAsli.style.display = 'none';
+
+            // Buat container flex
+            const footerAction = document.createElement('div');
+            footerAction.id = 'footer_antrian_action';
+            footerAction.style = "display: flex; gap: 10px; margin-top: 20px;";
+
+            // Buat tombol BERSIHKAN
+            const btnClean = document.createElement('button');
+            btnClean.innerHTML = "🗑️ BERSIHKAN";
+            btnClean.className = "btn-main"; // Gunakan class yang sama agar style seragam
+            btnClean.style = "background: #c0392b; flex: 1; padding: 12px; border-radius: 5px; color: white; border: none; font-weight: bold; cursor: pointer;";
+            btnClean.onclick = hapusSemuaAntrian;
+
+            // Buat ulang tombol TUTUP di sampingnya
+            const btnClose = document.createElement('button');
+            btnClose.innerHTML = "TUTUP";
+            btnClose.className = "btn-main";
+            btnClose.style = "background: #34495e; flex: 1; padding: 12px; border-radius: 5px; color: white; border: none; font-weight: bold; cursor: pointer;";
+            btnClose.onclick = () => document.getElementById('modal_antrian').style.display = 'none';
+
+            footerAction.appendChild(btnClean);
+            footerAction.appendChild(btnClose);
+            
+            // Masukkan ke bawah tabel
+            btnTutupAsli.parentNode.appendChild(footerAction);
         }
     }
-    
     document.getElementById('modal_antrian').style.display = 'block';
-    updateBadge(); // Pastikan badge update setelah modal dibuka
 }
 
-// 🔥 FUNGSI BARU: Helper untuk warna berdasarkan jenis
-function getJenisColor(jenis) {
-    const colors = {
-        'KONTAINER': '#2980b9',
-        'DOS': '#27ae60',
-        'MANUAL': '#e67e22',
-        'TAG I': '#8e44ad',
-        'NON-PTL': '#7f8c8d',
-        'TELUR': '#f1c40f',
-        'MKT': '#e74c3c',
-        'ATK GS': '#95a5a6',
-        'MATERAI': '#2c3e50'
-    };
-    return colors[jenis] || '#34495e';
-}
-
-function hapusSatuAntrian(faktur, kode, jenis) {
+// FUNGSI 1: Hapus per toko/faktur
+function hapusSatuAntrian(faktur) {
     Swal.fire({
         title: 'Hapus Antrian?',
-        html: `Faktur: <b>${faktur}</b><br>Toko: <b>${kode}</b><br>Jenis: <b>${jenis}</b>`,
+        text: `Faktur ${faktur} akan dihapus dari antrian.`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         confirmButtonText: 'Ya, Hapus!',
         didOpen: () => {
             const container = Swal.getContainer();
-            if (container) container.style.zIndex = '99999';
+            if (container) {
+                container.style.zIndex = '99999';
+            }
         }
     }).then((result) => {
         if (result.isConfirmed) {
             let db = JSON.parse(localStorage.getItem('q_polcek') || "[]");
-            
-            // Filter berdasarkan faktur, kode, DAN jenis
-            let filtered = db.filter(item => 
-                !(item.faktur === faktur && 
-                  item.kode === kode && 
-                  item.jenis === jenis)
-            );
-            
+            let filtered = db.filter(i => i.faktur !== faktur);
             localStorage.setItem('q_polcek', JSON.stringify(filtered));
             
-            updateBadge();
+            if (typeof updateBadge === "function") updateBadge();
             showAntrianModal();
 
             Swal.fire({
                 title: 'Terhapus!',
-                text: 'Data antrian telah dihapus',
                 icon: 'success',
                 timer: 800,
-                showConfirmButton: false
+                showConfirmButton: false,
+                didOpen: () => { Swal.getContainer().style.zIndex = '99999'; }
             });
         }
     });
@@ -2947,41 +2404,19 @@ function hapusSemuaAntrian() {
 }
 
 function pilihAntrian(tgl, kode, faktur, jenis) {
-    // Isi form dengan data yang dipilih
     document.getElementById('p_tgl').value = tgl;
     document.getElementById('p_kode').value = kode;
     document.getElementById('p_jenis').value = jenis;
     
-    // Jalankan filter untuk mendapatkan nama toko dan faktur
+    processStoreInput(); 
+    
     setTimeout(() => {
-        // Panggil processStoreInput untuk mengisi nama toko
-        if (typeof processStoreInput === 'function') {
-            // Simulasi input kode toko
-            const event = { target: { value: kode } };
-            processStoreInput(event);
-        }
+        document.getElementById('p_faktur').value = faktur;
+        document.getElementById('modal_antrian').style.display = 'none';
         
-        // Set faktur setelah filter jalan
-        setTimeout(() => {
-            const fakturSelect = document.getElementById('p_faktur');
-            if (fakturSelect) {
-                fakturSelect.value = faktur;
-                // Trigger change event
-                const changeEvent = new Event('change', { bubbles: true });
-                fakturSelect.dispatchEvent(changeEvent);
-            }
-            
-            // Tutup modal antrian
-            document.getElementById('modal_antrian').style.display = 'none';
-            
-            // Buka modal report
-            setTimeout(() => {
-                if (typeof showReport === 'function') {
-                    showReport();
-                }
-            }, 500);
-        }, 500);
-    }, 300);
+        // Langsung buka modal report (Final) untuk toko tersebut
+        showReport();
+    }, 500);
 }
 
 function toggleArea(target) {
