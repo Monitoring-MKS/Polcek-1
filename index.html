@@ -2243,7 +2243,7 @@ if (isComparisonType) {
             return jenis === "KONTAINER" ? !isD : (jenis === "DOS" ? isD : true);
         });
 
-        // 1. MEMBENTUK TARGET (Gunakan PLU sebagai Kunci Utama untuk DOS & MANUAL)
+        // 1. MEMBENTUK TARGET
         targetData.forEach(item => {
             const kMaster = (item.kontainer || "MANUAL").toUpperCase();
             
@@ -2255,7 +2255,9 @@ if (isComparisonType) {
                     desc: (jenis === "KONTAINER") ? "" : (item.descp || kMaster), 
                     target: 0, 
                     scan: 0,
-                    pluAsli: item.plu // Simpan PLU murni untuk pencocokan scan nanti
+                    pluAsli: item.plu,
+                    // 🔥 TAMBAHKAN ZONA UNTUK KONTAINER
+                    zona: (jenis === "KONTAINER") ? (item.zona || "-") : undefined
                 };
             }
             reportMap[key].target += (jenis === "KONTAINER") ? 1 : parseInt(item.qtyData || 0);
@@ -2278,10 +2280,9 @@ if (isComparisonType) {
                 }
             } 
             else {
-                // UNTUK DOS & MANUAL (Sudah Oke)
+                // UNTUK DOS & MANUAL
                 const itemPlu = String(item.plu).trim();
                 Object.keys(reportMap).forEach(key => {
-                    // Cek apakah PLU ada di dalam Key Target (misal: "DOS-A6 | 892360")
                     if (key === itemPlu || key.endsWith("| " + itemPlu) || key.includes(itemPlu)) {
                         reportMap[key].scan += parseInt(item.qty_scan || 0);
                         foundMatch = true;
@@ -2296,20 +2297,21 @@ if (isComparisonType) {
                 reportMap[labelOver] = { 
                     desc: item.descp || "BARANG LUAR/SALAH SCAN", 
                     target: 0, 
-                    scan: parseInt(item.qty_scan || 0) 
+                    scan: parseInt(item.qty_scan || 0),
+                    // 🔥 UNTUK OVER, ZONA KOSONG
+                    zona: (jenis === "KONTAINER") ? "-" : undefined
                 };
             }
         });
 
-// --- 2. KHUSUS JENIS TAG I (PENDATAAN MURNI) ---
+// --- 2. KHUSUS JENIS TAG I ---
     } else if (jenis === "TAG I") {
         aktualData.forEach(item => {
-            // Gunakan Barcode sebagai Key agar setiap scan barcode yang berbeda muncul per baris
             let keyTag = item.barcode || "TANPA BARCODE";
             if (!reportMap[keyTag]) {
                 reportMap[keyTag] = { 
                     desc: item.descp || "PENDATAAN TAG I", 
-                    target: 0, // Tag I tidak punya target
+                    target: 0,
                     scan: 0 
                 };
             }
@@ -2317,8 +2319,36 @@ if (isComparisonType) {
         });
     }
 
-    // GENERATE HTML TABEL
+    // 🔥 GENERATE HTML TABEL DENGAN ZONA UNTUK KONTAINER
     let html = "";
+    
+    // Tentukan header berdasarkan jenis
+    if (jenis === "KONTAINER") {
+        // Header dengan kolom ZONA untuk KONTAINER
+        html = `<table style="width:100%; border-collapse:collapse; font-size:11px;">
+            <thead>
+                <tr style="background:#2c3e50; color:white;">
+                    <th style="padding:8px;">NO KONTAINER / ZONA</th>
+                    <th style="padding:8px;">TARGET</th>
+                    <th style="padding:8px;">SCAN</th>
+                    <th style="padding:8px;">STATUS</th>
+                </tr>
+            </thead>
+            <tbody>`;
+    } else {
+        // Header standar untuk jenis lain
+        html = `<table style="width:100%; border-collapse:collapse; font-size:11px;">
+            <thead>
+                <tr style="background:#2c3e50; color:white;">
+                    <th style="padding:8px;">KONTAINER/PLU</th>
+                    <th style="padding:8px;">TARGET</th>
+                    <th style="padding:8px;">SCAN</th>
+                    <th style="padding:8px;">STATUS</th>
+                </tr>
+            </thead>
+            <tbody>`;
+    }
+    
     Object.keys(reportMap).forEach(key => {
         const r = reportMap[key];
         const itemDitemukan = aktualData.find(i => (i.plu === key || (i.barcode && i.barcode.includes(key)) || (key.includes(' | ') && i.plu === key.split(' | ')[1])));
@@ -2327,12 +2357,9 @@ if (isComparisonType) {
 
         let status;
 
-if (jenis === "TAG I") {
-            // Untuk Tag I, asal sudah ada scan, langsung dianggap DONE agar bisa final
+        if (jenis === "TAG I") {
             status = r.scan > 0 ? "DONE" : "PENDING";
-        }
-
-else if (r.target === "N/A" || r.scan === r.target) {
+        } else if (r.target === "N/A" || r.scan === r.target) {
             status = "DONE";
         } else if (itemPunyaKet !== "") {
             status = "SELISIH"; 
@@ -2340,22 +2367,44 @@ else if (r.target === "N/A" || r.scan === r.target) {
             status = (r.scan < r.target ? "PENDING" : "OVER");
         }
         
-        // Baris ini tetap (menentukan tombol final aktif/tidak)
         if (status !== "DONE" && status !== "SELISIH") isAllMatch = false;        
+        
         const colorBg = status === 'DONE' ? '#d4edda' : (status === 'SELISIH' ? '#ffcc80' : (status === 'PENDING' ? '#f8d7da' : '#fff3cd'));
-        const displayDesc = (jenis === "KONTAINER" || !r.desc) ? "" : `<br><small>${r.desc}</small>`;
         const ketTampil = itemPunyaKet ? `<br><i style="font-size:9px; color:brown;">Ket: ${itemPunyaKet}</i>` : "";
 
-        html += `<tr style="background:${colorBg}">
-            <td style="text-align:left; padding:5px;"><b>${key}</b>${displayDesc}${ketTampil}</td>
-            <td>${r.target}</td>
-            <td>${r.scan}</td>
-            <td>
-                <b>${status}</b><br>
-                <button onclick="revisiQty(${indexAsli})" style="font-size:10px; background:#f39c12; color:white; border:none; border-radius:3px; padding:3px 8px;">REVISI</button>
-            </td>
-        </tr>`;
+        // 🔥 FORMAT BARIS BERDASARKAN JENIS
+        if (jenis === "KONTAINER") {
+            // Untuk KONTAINER: tampilkan No Kontainer + Zona di bawah
+            const zona = r.zona || "-";
+            html += `<tr style="background:${colorBg}">
+                <td style="text-align:left; padding:5px;">
+                    <b>${key}</b>
+                    <br><small style="color:#7f8c8d;">Zona: ${zona}</small>
+                    ${ketTampil}
+                </td>
+                <td style="text-align:center;">${r.target}</td>
+                <td style="text-align:center;">${r.scan}</td>
+                <td style="text-align:center;">
+                    <b>${status}</b><br>
+                    <button onclick="revisiQty(${indexAsli})" style="font-size:10px; background:#f39c12; color:white; border:none; border-radius:3px; padding:3px 8px; margin-top:3px;">REVISI</button>
+                </td>
+            </tr>`;
+        } else {
+            // Untuk jenis lain (DOS, MANUAL, TAG I): tampilan standar
+            const displayDesc = (jenis === "KONTAINER" || !r.desc) ? "" : `<br><small>${r.desc}</small>`;
+            html += `<tr style="background:${colorBg}">
+                <td style="text-align:left; padding:5px;"><b>${key}</b>${displayDesc}${ketTampil}</td>
+                <td style="text-align:center;">${r.target}</td>
+                <td style="text-align:center;">${r.scan}</td>
+                <td style="text-align:center;">
+                    <b>${status}</b><br>
+                    <button onclick="revisiQty(${indexAsli})" style="font-size:10px; background:#f39c12; color:white; border:none; border-radius:3px; padding:3px 8px; margin-top:3px;">REVISI</button>
+                </td>
+            </tr>`;
+        }
     });
+
+    html += `</tbody></table>`;
 
     // --- BAGIAN UPDATE UI ---
     document.getElementById('report_info').innerHTML = `<b>${jenis}</b> | ${kode} | ${faktur}`;
@@ -2380,6 +2429,8 @@ else if (r.target === "N/A" || r.scan === r.target) {
             if (namaPetugas === userAktif) {
                 let li = document.createElement('li');
                 li.style.fontSize = "10px";
+                // 🔥 PERBAIKAN: Tambahkan teks ke list item
+                li.textContent = `${item.faktur} - ${item.plu} (${item.qty_scan})`;
                 listAntrian.appendChild(li);
             }
         });
