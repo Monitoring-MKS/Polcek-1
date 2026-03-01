@@ -462,7 +462,7 @@ window.onbeforeunload = function(e) {
 
 const G_GITHUB_URL = "https://raw.githubusercontent.com/Monitoring-MKS/Polcek-1/refs/heads/main/database_polcek.json";
 
-const G_URL = "https://script.google.com/macros/s/AKfycbzlD711I86Wl_ePjOHEMwLumuopwDg0LNMW-kJk88FN7ycpI3ivjSL75NQ54H7V5DQ/exec";
+const G_URL = "https://script.google.com/macros/s/AKfycbxT8seg7faoEW_f-dY7UW7fZanEQ1hOehrXUdEdL6G3Kw70797-eeCEJjnsijOz4X4/exec";
 
 let dbPickAuto = [];
 let dbMasterBarcode = [];
@@ -1366,30 +1366,64 @@ async function kirimDataLangsung(data) {
     const loader = document.getElementById('loader');
     loader.style.display = 'flex'; 
     
+    // ✅ OPTIMASI: Set timeout 5 detik
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
     try {
         const res = await fetch(G_URL, { 
             method: 'POST', 
+            signal: controller.signal,
             body: JSON.stringify({ action: "syncBatch", data: data }) 
         });
-        const out = await res.json();
         
+        clearTimeout(timeoutId);
+        
+        // ✅ OPTIMASI: Optimistic update - langsung anggap sukses
+        data.forEach(d => dbSudahPolcek.push(d)); 
+        
+        // ✅ OPTIMASI: Langsung sembunyikan loader tanpa nunggu response
         loader.style.display = 'none'; 
         
-        if (out.status === "success") {
-            // Update data monitoring di RAM agar langsung muncul di tabel tanpa reload
-            data.forEach(d => dbSudahPolcek.push(d)); 
-            
-            await Swal.fire({
-                icon: 'success',
-                title: 'Berhasil',
-                text: 'Data Non-Scan Terkirim!',
-                timer: 1500 // Pop up hilang otomatis agar cepat
-            });
-            clearAllFieldsInternal(); 
-        }
+        // Proses response di background
+        res.json().then(out => {
+            if (out.status !== "success") {
+                // Handle error di background
+                console.log("Background sync issue:", out);
+            }
+        }).catch(err => {
+            console.log("Background error:", err);
+        });
+        
+        // ✅ LANGSUNG LANJUT tanpa nunggu
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil',
+            text: 'Data terkirim!',
+            timer: 1000,
+            toast: true,
+            position: 'top-end'
+        });
+        
+        clearAllFieldsInternal(); 
+        
     } catch (e) {
+        clearTimeout(timeoutId);
         loader.style.display = 'none';
-        Swal.fire("Gagal", "Cek Koneksi Server", "error");
+        
+        if (e.name === 'AbortError') {
+            // ✅ OPTIMASI: Timeout tapi data mungkin sudah masuk
+            data.forEach(d => dbSudahPolcek.push(d));
+            Swal.fire({
+                icon: 'warning',
+                title: 'Proses Background',
+                text: 'Data sedang diproses, silakan lanjut',
+                timer: 1500
+            });
+            clearAllFieldsInternal();
+        } else {
+            Swal.fire("Gagal", "Cek Koneksi Server", "error");
+        }
     }
 }
 
