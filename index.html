@@ -293,7 +293,7 @@
                     <tr>
                         <th style="padding:8px;">URPICK</th>
                         <th style="padding:8px;">TOKO</th>
-                        <th style="padding:8px;">JENIS</th>
+                        <th style="padding:8px;">JENIS / ITEM</th>
                         <th style="padding:8px;">ACTION</th>
                     </tr>
                 </thead>
@@ -393,7 +393,8 @@
         <div id="report_container" style="overflow-x:auto;">
             <table border="1" style="width:100%; border-collapse:collapse; font-size:11px; text-align:center;">
                 <thead id="report_head">
-                    
+                    <tr style="background:#eee;"><th>KONTAINER</th><th>QTY</th><th>POLCEK</th><th>STATUS</th></tr>
+                </thead>
                 <tbody id="report_body"></tbody>
             </table>
         </div>
@@ -921,21 +922,27 @@ function validateScanFisik() {
     // 🔥 FUNGSI: Normalisasi PLU (hapus leading zeros)
     const normalizePLU = (plu) => {
         if (!plu) return plu;
+        // Hapus leading zeros, tapi jika semua nol, kembalikan "0"
         const normalized = String(plu).replace(/^0+/, '');
         return normalized === '' ? '0' : normalized;
     };
 
-    // 1. IDENTIFIKASI PLU
+    // 1. IDENTIFIKASI PLU (Bisa Label, Barcode Dos, atau Barcode Item)
     let foundPLU = "";
+    let originalBarcode = scanVal;
     
     if (scanVal.includes('-')) {
+        // Alur Label (Contoh: 18996001401436-UNDEFINED)
         const parts = scanVal.split('-').filter(Boolean);
         foundPLU = (jenisVal === "DOS") ? parts[3] : parts[2];
     } else {
+        // Alur Barcode Fisik / Barcode Dos (Murni Angka)
         const matchMB = dbMasterBarcode.find(m => {
             const barcodeDos = String(m.barcodeDos || "").trim();
             const barcodeItem = String(m.barcodeItem || "").trim();
             
+            // 🔥 BANDINGKAN DENGAN DAN TANPA LEADING ZEROS
+            // Normalisasi kedua sisi untuk perbandingan
             const normalizedScan = normalizePLU(scanVal);
             const normalizedDos = normalizePLU(barcodeDos);
             const normalizedItem = normalizePLU(barcodeItem);
@@ -947,10 +954,19 @@ function validateScanFisik() {
         });
         
         if (matchMB) {
+            // Simpan PLU asli dari database (dengan leading zeros jika ada)
             foundPLU = String(matchMB.plu).trim();
+            console.log("DEBUG Fisik - Match found:", {
+                scanBarcode: scanVal,
+                normalizedScan: normalizePLU(scanVal),
+                dbBarcodeDos: matchMB.barcodeDos,
+                dbBarcodeItem: matchMB.barcodeItem,
+                dbPLU: foundPLU
+            });
         }
     }
 
+    // Jika PLU tidak ditemukan sama sekali
     if (!foundPLU) {
         if (typeof playError === "function") playError();
         notify("BARCODE TIDAK TERDAFTAR!", "error", "p_scan_fisik");
@@ -958,12 +974,13 @@ function validateScanFisik() {
         return;
     }
 
-    // 2. CARI DATA DI PICKING
+    // 2. CARI DATA DI PICKING (DOS/MANUAL)
     let matchPicking;
     if (jenisVal === "DOS") {
         matchPicking = dbPickAuto.find(i => {
             if (i.faktur !== fakturVal || i.kodeToko !== kodeToko) return false;
             
+            // 🔥 BANDINGKAN PLU DENGAN DAN TANPA LEADING ZEROS
             const dbPLU = String(i.plu || "").trim();
             const normalizedFound = normalizePLU(foundPLU);
             const normalizedDb = normalizePLU(dbPLU);
@@ -975,6 +992,7 @@ function validateScanFisik() {
         matchPicking = dbManual.find(i => {
             if (i.faktur !== fakturVal) return false;
             
+            // 🔥 BANDINGKAN PLU DENGAN DAN TANPA LEADING ZEROS
             const dbPLU = String(i.plu || "").trim();
             const normalizedFound = normalizePLU(foundPLU);
             const normalizedDb = normalizePLU(dbPLU);
@@ -985,12 +1003,12 @@ function validateScanFisik() {
     }
 
     if (matchPicking) {
+        // 🔥 GUNAKAN PLU DARI DATABASE (untuk konsistensi)
         const pluDatabase = String(matchPicking.plu || "").trim();
         const targetAsli = parseInt(matchPicking.qtyData || 0);
         
-        // 🔥 Hitung total yang sudah di-scan
+        // Hitung dulu yang sudah masuk ke server/antrian lokal
         const sudahTerpenuhi = hitungTotalTerScan(pluDatabase, fakturVal, kodeToko, jenisVal);
-        const sisaTarget = targetAsli - sudahTerpenuhi;
 
         // CEK VALIDASI OVER
         if (sudahTerpenuhi >= targetAsli) {
@@ -998,55 +1016,33 @@ function validateScanFisik() {
             Swal.fire({
                 icon: "warning",
                 title: "SUDAH LENGKAP!",
-                text: `PLU ${pluDatabase} sudah ter-scan ${sudahTerpenuhi}/${targetAsli}`
+                text: `PLU ${pluDatabase} sudah ter-scan ${sudahTerpenuhi} dari target ${targetAsli}`
             });
-            document.getElementById('p_scan_fisik').value = "";
-            document.getElementById('p_scan_fisik').focus();
-            return;
-        }
-
-        // ACTION: ISI DATA KE LAYAR
-        fillData(matchPicking);
-        document.getElementById('p_scan_label').value = scanVal;
-
-        // 🔥 LOGIKA BARU: Auto save hanya jika target <= 5
-        if (targetAsli <= 5) {
-            // Auto-save dengan qty 1, tapi tidak melebihi sisa target
-            const qtyToSave = Math.min(1, sisaTarget);
-            document.getElementById('p_qty_input').value = qtyToSave;
+        } else {
+            // ACTION: ISI DATA KE LAYAR
+            fillData(matchPicking);
             
+            // PAKSA QTY KE 1
+            document.getElementById('p_qty_input').value = 1;
+            
+            // Simpan label sesuai apa yang di-scan
+            document.getElementById('p_scan_label').value = scanVal;
+
+            // Notifikasi sukses dengan informasi PLU
             Swal.fire({
                 icon: 'success',
                 title: 'Berhasil!',
-                text: `PLU: ${pluDatabase} (${qtyToSave}/${sisaTarget} sisa)`,
+                text: `PLU: ${pluDatabase}`,
                 timer: 800,
                 showConfirmButton: false,
                 toast: true,
                 position: 'top-end'
             });
-            
+
+            // Langsung simpan otomatis
             if (typeof saveData === "function") {
                 saveData();
             }
-        } else {
-            // Notifikasi sukses dengan informasi sisa target
-            Swal.fire({
-                icon: 'success',
-                title: 'PLU Ditemukan!',
-                text: `PLU: ${pluDatabase} - Sisa target: ${sisaTarget}`,
-                timer: 1000,
-                showConfirmButton: false,
-                toast: true,
-                position: 'top-end'
-            });
-            
-            // Fokus ke input qty untuk input manual
-            setTimeout(() => {
-                const qtyInput = document.getElementById('p_qty_input');
-                qtyInput.placeholder = `Maks: ${sisaTarget}`;
-                qtyInput.focus();
-                qtyInput.select();
-            }, 500);
         }
     } else {
         if (typeof playError === "function") playError();
@@ -1060,10 +1056,11 @@ function validateScanFisik() {
 function validateScanLabel() {
     let rawScanVal = document.getElementById('p_scan_label').value;
     
+    // 🔥 NORMALISASI: Hapus spasi berlebih tapi pertahankan struktur
     const scanVal = rawScanVal
         .trim()
-        .replace(/\s+/g, ' ')
-        .replace(/\s*-\s*/g, '-')
+        .replace(/\s+/g, ' ')        // Ganti multiple spasi jadi 1 spasi
+        .replace(/\s*-\s*/g, '-')     // Hapus spasi di sekitar tanda hubung
         .toUpperCase();
     
     document.getElementById('p_scan_label').value = scanVal;
@@ -1072,11 +1069,10 @@ function validateScanLabel() {
     const kodeToko = document.getElementById('p_kode').value.toUpperCase();
     const fakturVal = document.getElementById('p_faktur').value;
     const pluAktif = String(document.getElementById('p_plu').value).trim();
-    const targetQty = parseInt(document.getElementById('p_qty_data').value || 0);
 
     if (!scanVal) return;
 
-    // KHUSUS UNTUK MANUAL
+    // 🔥 KHUSUS UNTUK MANUAL - DIPISAH AGAR TIDAK MENGGANGGU YANG LAIN
     if (jenisVal === "MANUAL") {
         if (!pluAktif || pluAktif === "-") {
             document.getElementById('p_scan_label').value = "";
@@ -1088,19 +1084,37 @@ function validateScanLabel() {
             });
         }
 
+        // 🔥 PERBAIKAN: Split dengan menangani spasi dan multiple separator
+        // Ganti semua spasi dan multiple hubung menjadi single hubung
         const cleanBarcode = scanVal
-            .replace(/\s+/g, '-')
-            .replace(/-+/g, '-');
+            .replace(/\s+/g, '-')     // Ganti spasi dengan hubung
+            .replace(/-+/g, '-');      // Ganti multiple hubung jadi single hubung
             
         const parts = cleanBarcode.split('-').filter(part => part.trim() !== '');
         
+        console.log("DEBUG Manual - Raw scan:", rawScanVal);
+        console.log("DEBUG Manual - Normalized:", scanVal);
+        console.log("DEBUG Manual - Clean barcode:", cleanBarcode);
+        console.log("DEBUG Manual - Parts:", parts);
+        
+        // 🔥 PERBAIKAN: Deteksi PLU dari bagian AKHIR dengan berbagai kemungkinan
         let pluDariBarcode = "";
+        
         if (parts.length >= 2) {
+            // Ambil part terakhir sebagai PLU
             pluDariBarcode = parts[parts.length - 1];
         }
         
+        // 🔥 PERBAIKAN: Ambil bagian faktur (semua parts kecuali yang terakhir)
         const fakturDariBarcode = parts.slice(0, -1).join('-');
         
+        console.log("DEBUG Manual - PLU barcode:", pluDariBarcode);
+        console.log("DEBUG Manual - PLU aktif:", pluAktif);
+        console.log("DEBUG Manual - Faktur barcode:", fakturDariBarcode);
+        console.log("DEBUG Manual - Faktur aktif:", fakturVal);
+        
+        // 🔥 PERBAIKAN: Bandingkan PLU (sebagai string, tanpa menghilangkan angka 0 di depan)
+        // Karena PLU bisa berupa angka panjang seperti 123235
         if (pluDariBarcode !== pluAktif) {
             if (typeof playError === "function") playError();
             Swal.fire({
@@ -1113,12 +1127,15 @@ function validateScanLabel() {
             return;
         }
         
+        // 🔥 PERBAIKAN: Validasi faktur (cocokkan dengan berbagai kemungkinan)
+        // Faktur aktif harus ada di dalam fakturDariBarcode ATAU sebaliknya
         const fakturAktifClean = fakturVal.replace(/\s+/g, '').toUpperCase();
         const fakturBarcodeClean = fakturDariBarcode.replace(/\s+/g, '').toUpperCase();
         
-        const isFakturMatch = fakturBarcodeClean.includes(fakturAktifClean) || 
-                              fakturAktifClean.includes(fakturBarcodeClean) ||
-                              fakturBarcodeClean === fakturAktifClean;
+        const isFakturMatch = 
+            fakturBarcodeClean.includes(fakturAktifClean) || 
+            fakturAktifClean.includes(fakturBarcodeClean) ||
+            fakturBarcodeClean === fakturAktifClean;
         
         if (!isFakturMatch) {
             if (typeof playError === "function") playError();
@@ -1132,52 +1149,35 @@ function validateScanLabel() {
             return;
         }
         
-        // 🔥 Hitung sisa target
-        const totalSudahScan = hitungTotalTerScan(pluAktif, fakturVal, kodeToko, jenisVal);
-        const sisaTarget = targetQty - totalSudahScan;
+        // SEMUA VALIDASI LOLOS
+        document.getElementById('p_qty_input').value = 1;
         
-        // 🔥 LOGIKA BARU: Auto save hanya jika target <= 5
-        if (targetQty <= 5) {
-            const qtyToSave = Math.min(1, sisaTarget);
-            document.getElementById('p_qty_input').value = qtyToSave;
-            
-            Swal.fire({
-                icon: 'success',
-                title: 'Valid!',
-                text: `PLU ${pluAktif} cocok (${qtyToSave}/${sisaTarget} sisa)`,
-                timer: 800,
-                showConfirmButton: false,
-                toast: true,
-                position: 'top-end'
-            });
-            
-            if (typeof saveData === "function") {
-                saveData();
+        // Notifikasi sukses
+        Swal.fire({
+            icon: 'success',
+            title: 'Valid!',
+            text: `PLU ${pluAktif} cocok`,
+            timer: 800,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+        });
+        
+        // Fokus ke scan fisik untuk lanjut
+        setTimeout(() => { 
+            const scanFisik = document.getElementById('p_scan_fisik');
+            if (scanFisik) {
+                scanFisik.focus();
+                scanFisik.select();
             }
-        } else {
-            Swal.fire({
-                icon: 'success',
-                title: 'Valid!',
-                text: `PLU ${pluAktif} - Sisa target: ${sisaTarget}`,
-                timer: 1000,
-                showConfirmButton: false,
-                toast: true,
-                position: 'top-end'
-            });
-            
-            setTimeout(() => { 
-                const qtyInput = document.getElementById('p_qty_input');
-                qtyInput.placeholder = `Maks: ${sisaTarget}`;
-                qtyInput.focus();
-                qtyInput.select();
-            }, 300);
-        }
+        }, 300);
         
-        return;
+        return; // PENTING: return agar tidak lanjut ke kode berikutnya
     }
 
-    // KODE ORIGINAL UNTUK DOS (TETAP SAMA DENGAN LOGIKA YANG SUDAH DIPERBAIKI)
+    // 🔥 KODE ORIGINAL UNTUK DOS (TETAP SAMA)
     else if (jenisVal === "DOS") {
+        // ... kode DOS tetap sama ...
         if (!pluAktif || pluAktif === "-") {
             document.getElementById('p_scan_label').value = "";
             return Swal.fire("Urutan Salah", "Scan Barcode FISIK barang dulu!", "warning");
@@ -1194,24 +1194,8 @@ function validateScanLabel() {
         }
 
         if (String(pluLabel) === pluAktif) {
-            // 🔥 Hitung sisa target
-            const totalSudahScan = hitungTotalTerScan(pluAktif, fakturVal, kodeToko, jenisVal);
-            const sisaTarget = targetQty - totalSudahScan;
-            
-            if (targetQty <= 5) {
-                const qtyToSave = Math.min(1, sisaTarget);
-                document.getElementById('p_qty_input').value = qtyToSave;
-                if (typeof saveData === "function") {
-                    saveData();
-                }
-                setTimeout(() => { document.getElementById('p_scan_fisik').focus(); }, 100);
-            } else {
-                setTimeout(() => { 
-                    const qtyInput = document.getElementById('p_qty_input');
-                    qtyInput.placeholder = `Maks: ${sisaTarget}`;
-                    qtyInput.focus(); 
-                }, 100);
-            }
+            document.getElementById('p_qty_input').value = 1;
+            setTimeout(() => { document.getElementById('p_scan_fisik').focus(); }, 100);
         } else {
             if (typeof playError === "function") playError();
             Swal.fire("PLU TIDAK COCOK", `Label: ${pluLabel} | Fisik: ${pluAktif}`, "error");
@@ -1219,7 +1203,7 @@ function validateScanLabel() {
         }
     }
 
-    // KODE ORIGINAL UNTUK KONTAINER (TETAP SAMA)
+    // 🔥 KODE ORIGINAL UNTUK KONTAINER (TETAP SAMA)
     else if (jenisVal === "KONTAINER") {
         // ... kode KONTAINER tetap sama ...
         const parts = scanVal.split('-').filter(Boolean);
@@ -1228,7 +1212,7 @@ function validateScanLabel() {
 
         if (kodeTokoLabel !== kodeToko) {
             document.getElementById('p_scan_label').value = "";
-            if (typeof playError === "function") playError(); 
+            if (typeof playError === "function") playError(); 
             return Swal.fire({ icon: 'error', title: 'SALAH TOKO!', text: `Label Toko ${kodeTokoLabel}, Aktif Toko ${kodeToko}` });
         }
 
@@ -1244,20 +1228,20 @@ function validateScanLabel() {
 
         const match = dbPickAuto.find(i => i.faktur === fakturVal && i.kodeToko === kodeToko && (i.kontainer || "").toUpperCase() === noKontainerLabel);
 
-        if (match) { 
-            fillData(match); 
-            document.getElementById('p_qty_input').value = 1; 
+        if (match) { 
+            fillData(match); 
+            document.getElementById('p_qty_input').value = 1; 
             document.getElementById('p_qty_input').readOnly = true;
             document.getElementById('p_scan_label').value = scanVal.toUpperCase();
             setTimeout(() => { saveData(); }, 300);
-        } else { 
+        } else { 
             if (typeof playError === "function") playError();
-            notify(" NO KONTAINER TIDAK ADA DI DATA!", "error", "p_scan_label"); 
-            document.getElementById('p_scan_label').value = ""; 
+            notify(" NO KONTAINER TIDAK ADA DI DATA!", "error", "p_scan_label"); 
+            document.getElementById('p_scan_label').value = ""; 
         }
     }
 
-    // KODE ORIGINAL UNTUK TAG I (TETAP SAMA)
+    // 🔥 KODE ORIGINAL UNTUK TAG I (TETAP SAMA)
     else if (jenisVal === "TAG I") {
         document.getElementById('p_plu').value = "TAG-I";
         document.getElementById('p_scan_label').value = scanVal || "TAG-I";
@@ -1297,23 +1281,9 @@ function fillData(m) {
     
     document.getElementById('p_qty_data').value = totalTargetToko;
     document.getElementById('area_fisik').style.display = 'block';
-    
-    // 🔥 TAMBAHAN: Logika untuk qty > 5
-    const qtyInput = document.getElementById('p_qty_input');
-    if (totalTargetToko > 5 && (jenis === "DOS" || jenis === "MANUAL")) {
-        qtyInput.readOnly = false;
-        qtyInput.style.background = "white";
-        qtyInput.value = ""; // Kosongkan untuk input manual
-        qtyInput.placeholder = "Input jumlah...";
-        console.log(`Target ${totalTargetToko} > 5, qty bisa diinput manual`);
-    } else {
-        // Untuk target <= 5 atau bukan DOS/MANUAL, tetap readonly
-        qtyInput.readOnly = true;
-        qtyInput.style.background = "#eeeeee";
-        qtyInput.placeholder = "";
-    }
 }
 
+// --- 4. FUNGSI SAVE DATA (BERSIHKAN SEMUA) ---
 async function saveData() {
     const petugasAktif = currentUser || localStorage.getItem('activeUser') || "Tanpa Nama";
     const qtyInp = document.getElementById('p_qty_input');
@@ -1324,49 +1294,6 @@ async function saveData() {
     const barcodeVal = document.getElementById('p_scan_label').value;
     
     if (!qtyInp.value || qtyInp.value <= 0) return notify("Isi Qty!", "error", "p_qty_input");
-
-    // 🔥 AMBIL DATA YANG DIPERLUKAN
-    const qtyData = parseInt(document.getElementById('p_qty_data').value || 0);
-    const qtyScan = parseInt(qtyInp.value);
-    
-    // 🔥 VALIDASI BARU: Hitung total yang sudah di-scan (termasuk yang di server dan antrian)
-    const totalSudahScan = hitungTotalTerScan(pluVal, fakturVal, kodeToko, jenis);
-    const sisaTarget = qtyData - totalSudahScan;
-    
-    console.log("DEBUG Save - PLU:", pluVal);
-    console.log("DEBUG Save - Target:", qtyData);
-    console.log("DEBUG Save - Sudah Scan:", totalSudahScan);
-    console.log("DEBUG Save - Sisa Target:", sisaTarget);
-    console.log("DEBUG Save - Qty Input:", qtyScan);
-    
-    // 🔥 VALIDASI: Cek apakah masih ada sisa target
-    if (sisaTarget <= 0) {
-        if (typeof playError === "function") playError();
-        Swal.fire({
-            icon: 'warning',
-            title: 'SUDAH LENGKAP!',
-            text: `PLU ${pluVal} sudah mencapai target (${totalSudahScan}/${qtyData})`,
-            confirmButtonColor: '#c0392b'
-        });
-        qtyInp.focus();
-        qtyInp.select();
-        return;
-    }
-    
-    // 🔥 VALIDASI: Qty input tidak boleh melebihi sisa target
-    if (qtyScan > sisaTarget) {
-        if (typeof playError === "function") playError();
-        Swal.fire({
-            icon: 'error',
-            title: 'QTY MELEBIHI SISA TARGET',
-            text: `Sisa target: ${sisaTarget}, Scan: ${qtyScan}. Maksimal ${sisaTarget} lagi!`,
-            confirmButtonColor: '#c0392b'
-        });
-        qtyInp.value = sisaTarget; // Saran nilai maksimal
-        qtyInp.focus();
-        qtyInp.select();
-        return;
-    }
 
     // --- REVISI KHUSUS LOGIKA NO KONTAINER ---
     let noKontainer = "-"; 
@@ -1399,10 +1326,10 @@ async function saveData() {
             plu: document.getElementById('p_plu').value || "MANUAL",
             descp: document.getElementById('p_descp').value || "-",
             qty_data: 0,
-            qty_scan: qtyScan,
+            qty_scan: parseInt(qtyInp.value),
             keterangan: "",            
             petugas: petugasAktif,
-            kontainer: noKontainer
+            kontainer: noKontainer // Masuk ke kolom P
         }];
         await kirimDataLangsung(dataLangsung);
     } else {
@@ -1418,11 +1345,11 @@ async function saveData() {
             barcode: document.getElementById('p_scan_label').value,
             plu: document.getElementById('p_plu').value,
             descp: document.getElementById('p_descp').value,
-            qty_data: qtyData,
-            qty_scan: qtyScan,
+            qty_data: parseInt(document.getElementById('p_qty_data').value || 0),
+            qty_scan: parseInt(qtyInp.value),
             keterangan: "",            
             petugas: petugasAktif,
-            kontainer: noKontainer
+            kontainer: noKontainer // Masuk ke kolom P
         });
         localStorage.setItem('q_polcek', JSON.stringify(q));
         updateBadge();
@@ -1434,6 +1361,7 @@ async function saveData() {
         afterSaveFocus(jenis); 
     }
 }
+
 async function kirimDataLangsung(data) {
     const loader = document.getElementById('loader');
     loader.style.display = 'flex'; 
@@ -2400,7 +2328,7 @@ if (isComparisonType) {
         html = `<table style="width:100%; border-collapse:collapse; font-size:11px;">
             <thead>
                 <tr style="background:#2c3e50; color:white;">
-                    <th style="padding:8px;">NO KONTAINER</th>
+                    <th style="padding:8px;">NO KONTAINER / ZONA</th>
                     <th style="padding:8px;">TARGET</th>
                     <th style="padding:8px;">SCAN</th>
                     <th style="padding:8px;">STATUS</th>
@@ -2412,7 +2340,7 @@ if (isComparisonType) {
         html = `<table style="width:100%; border-collapse:collapse; font-size:11px;">
             <thead>
                 <tr style="background:#2c3e50; color:white;">
-                    <th style="padding:8px;">KONTAINER</th>
+                    <th style="padding:8px;">KONTAINER/PLU</th>
                     <th style="padding:8px;">TARGET</th>
                     <th style="padding:8px;">SCAN</th>
                     <th style="padding:8px;">STATUS</th>
