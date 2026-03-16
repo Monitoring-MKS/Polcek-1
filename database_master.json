@@ -1,5 +1,5 @@
 {
-  "last_update": "2026-03-16 21:32:56",
+  "last_update": "2026-03-16 21:56:55",
   "pickAuto": [
     {
       "tglInput": "2026-03-16",
@@ -17335,72 +17335,5 @@
       "plu": "425602"
     }
   ],
-  "dataManual": [
-    {
-      "tglInput": "2026-03-16",
-      "urpick": 5,
-      "kodeToko": "R447",
-      "namaToko": "SPBU KAREMA MAMUJU [SBKR]",
-      "faktur": "RZ01-TC26025471",
-      "zona": "D5",
-      "plu": "5940",
-      "descp": "FANTA STRAWBERRY PET 1.5L (F)",
-      "qtyData": 2
-    },
-    {
-      "tglInput": "2026-03-16",
-      "urpick": 5,
-      "kodeToko": "R447",
-      "namaToko": "SPBU KAREMA MAMUJU [SBKR]",
-      "faktur": "RZ01-TC26025471",
-      "zona": "D5",
-      "plu": "429184",
-      "descp": "CRYSTALIN AIR MNRL PET 1500ML",
-      "qtyData": 5
-    },
-    {
-      "tglInput": "2026-03-16",
-      "urpick": 5,
-      "kodeToko": "R447",
-      "namaToko": "SPBU KAREMA MAMUJU [SBKR]",
-      "faktur": "RZ01-TC26025471",
-      "zona": "D5",
-      "plu": "425602",
-      "descp": "SUNLIGHT JERUK NIPIS 400/430G",
-      "qtyData": 2
-    },
-    {
-      "tglInput": "2026-03-16",
-      "urpick": 6,
-      "kodeToko": "R236",
-      "namaToko": "AHMAD YANI POLMAN [AYAN]",
-      "faktur": "RZ01-TC26025163",
-      "zona": "D5",
-      "plu": "5940",
-      "descp": "FANTA STRAWBERRY PET 1.5L (F)",
-      "qtyData": 2
-    },
-    {
-      "tglInput": "2026-03-16",
-      "urpick": 6,
-      "kodeToko": "R236",
-      "namaToko": "AHMAD YANI POLMAN [AYAN]",
-      "faktur": "RZ01-TC26025163",
-      "zona": "D5",
-      "plu": "429184",
-      "descp": "CRYSTALIN AIR MNRL PET 1500ML",
-      "qtyData": 5
-    },
-    {
-      "tglInput": "2026-03-16",
-      "urpick": 6,
-      "kodeToko": "R236",
-      "namaToko": "AHMAD YANI POLMAN [AYAN]",
-      "faktur": "RZ01-TC26025163",
-      "zona": "D5",
-      "plu": "425602",
-      "descp": "SUNLIGHT JERUK NIPIS 400/430G",
-      "qtyData": 2
-    }
-  ]
+  "dataManual": []
 }
