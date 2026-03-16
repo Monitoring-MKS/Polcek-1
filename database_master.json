@@ -1,5 +1,5 @@
 {
-  "last_update": "2026-03-16 21:19:36",
+  "last_update": "2026-03-16 21:32:56",
   "pickAuto": [
     {
       "tglInput": "2026-03-16",
@@ -17354,8 +17354,8 @@
       "namaToko": "SPBU KAREMA MAMUJU [SBKR]",
       "faktur": "RZ01-TC26025471",
       "zona": "D5",
-      "plu": "5941",
-      "descp": "FANTA STRAWBERRY PET 1.5L (F)",
+      "plu": "429184",
+      "descp": "CRYSTALIN AIR MNRL PET 1500ML",
       "qtyData": 5
     },
     {
@@ -17365,8 +17365,8 @@
       "namaToko": "SPBU KAREMA MAMUJU [SBKR]",
       "faktur": "RZ01-TC26025471",
       "zona": "D5",
-      "plu": "5942",
-      "descp": "FANTA STRAWBERRY PET 1.5L (F)",
+      "plu": "425602",
+      "descp": "SUNLIGHT JERUK NIPIS 400/430G",
       "qtyData": 2
     },
     {
@@ -17387,8 +17387,8 @@
       "namaToko": "AHMAD YANI POLMAN [AYAN]",
       "faktur": "RZ01-TC26025163",
       "zona": "D5",
-      "plu": "5941",
-      "descp": "FANTA STRAWBERRY PET 1.5L (F)",
+      "plu": "429184",
+      "descp": "CRYSTALIN AIR MNRL PET 1500ML",
       "qtyData": 5
     },
     {
@@ -17398,8 +17398,8 @@
       "namaToko": "AHMAD YANI POLMAN [AYAN]",
       "faktur": "RZ01-TC26025163",
       "zona": "D5",
-      "plu": "5942",
-      "descp": "FANTA STRAWBERRY PET 1.5L (F)",
+      "plu": "425602",
+      "descp": "SUNLIGHT JERUK NIPIS 400/430G",
       "qtyData": 2
     }
   ]
